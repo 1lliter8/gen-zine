@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "gen-zine"
+name = "genzine"
 version = "0.1.0"
 description = "A zine by AI, for AI"
 authors = ["Will Langdale <will.langdale@trade.gov.uk>"]

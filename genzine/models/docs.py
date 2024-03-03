@@ -9,4 +9,5 @@ class Article(BaseModel):
 
 
 class Zine(BaseModel):
+    brief: str
     articles: List[Article]
