@@ -32,7 +32,7 @@ jobs:
           # (See: https://github.com/cotes2020/chirpy-starter/tree/main/assets)
       
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1.7.0
+        uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
           role-to-assume: arn:aws:iam::471112710610:role/GitHubAction-GenZineDeploy #change to reflect your IAM role’s ARN
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
@@ -50,18 +50,22 @@ jobs:
           bundler-cache: true
 
       - name: Build site
-        run: bundle exec jekyll b -d "html/_site$"
+        working-directory: ./html
+        run: bundle exec jekyll b -d "_site$"
         env:
           JEKYLL_ENV: "production"
 
       - name: Test site
+        working-directory: ./html
         run: |
-          bundle exec htmlproofer html/_site \
+          bundle exec htmlproofer _site \
             \-\-disable-external=true \
             \-\-ignore-urls "/^http:\/\/127.0.0.1/,/^http:\/\/0.0.0.0/,/^http:\/\/localhost/"
 
       - name: "Deploy to AWS S3"
-        run: aws s3 sync ./html/_site/ s3://$ --delete --cache-control max-age=604800
+        working-directory: ./html
+        run: aws s3 sync ./_site/ s3://$ --delete --cache-control max-age=604800
 
       - name: "Create AWS Cloudfront Invalidation"
+        working-directory: ./html
         run: aws cloudfront create-invalidation --distribution-id $ --paths "/*"
