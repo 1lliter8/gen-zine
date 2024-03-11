@@ -12,9 +12,11 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID  }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY  }}
-  AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION  }}
+  AWS_REGION : <"eu-west-2">
+
+permissions:
+      id-token: write   # This is required for requesting the JWT
+      contents: read    # This is required for actions/checkout
 
 jobs:
   build:
@@ -28,6 +30,18 @@ jobs:
           # submodules: true
           # If using the 'assets' git submodule from Chirpy Starter, uncomment above
           # (See: https://github.com/cotes2020/chirpy-starter/tree/main/assets)
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1.7.0
+        with:
+          role-to-assume: <arn:aws:iam::471112710610:role/GitHubAction-GenZineDeploy> #change to reflect your IAM role’s ARN
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+      
+      # Hello from AWS: WhoAmI
+      - name: Sts GetCallerIdentity
+        run: |
+          aws sts get-caller-identity
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
