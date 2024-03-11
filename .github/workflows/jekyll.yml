@@ -48,6 +48,7 @@ jobs:
         with:
           ruby-version: 3 # reads from a '.ruby-version' or '.tools-version' file if 'ruby-version' is omitted
           bundler-cache: true
+          cache-dependency-path: ./html/Gemfile.lock
 
       - name: Build site
         working-directory: ./html
