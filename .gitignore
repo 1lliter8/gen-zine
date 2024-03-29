@@ -1,3 +1,6 @@
+# Dev container stuff
+.devcontainer
+
 # Mac stuff
 .DS_Store
 

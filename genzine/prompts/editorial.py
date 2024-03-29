@@ -1,6 +1,5 @@
 from langchain_core.prompts import ChatPromptTemplate
 
-
 zine_name = ChatPromptTemplate.from_template(
     "You are the editor of a zine by AIs, for AIs. You are in charge of planning "
     "the latest edition. What is the name of your zine?"

@@ -1,5 +1,6 @@
-from typing import Optional, List
 from pathlib import Path
+from typing import List, Optional
+
 from pydantic.v1 import BaseModel, Field
 
 
@@ -11,9 +12,7 @@ class Image(BaseModel):
 class Article(BaseModel):
     title: str = Field(description="title of the article")
     filename: Optional[str] = Field(description="article subdirectory")
-    prompt: str = Field(
-        description="descriptive article summary to prompt the writer"
-    )
+    prompt: str = Field(description="descriptive article summary to prompt the writer")
     text: Optional[str] = Field(
         description="full text of the article in markdown format"
     )

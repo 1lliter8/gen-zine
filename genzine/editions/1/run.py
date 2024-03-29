@@ -1,19 +1,22 @@
 import re
 from pathlib import Path
 from typing import List
-import requests
-from io import BytesIO
 
+import requests
+from dotenv import find_dotenv, load_dotenv
+from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
+from langchain_openai import ChatOpenAI
 from openai import OpenAI
 
-from langchain_core.output_parsers import StrOutputParser, JsonOutputParser 
-from langchain_openai import ChatOpenAI
-
-from dotenv import load_dotenv, find_dotenv
-
-from genzine.prompts.editorial import zine_name, zine_articles, format_article, create_article, create_commission
-from genzine.models.docs import Zine, Article, Image
-from genzine.utils import to_camelcase, h1, h2
+from genzine.models.docs import Article, Image, Zine
+from genzine.prompts.editorial import (
+    create_article,
+    create_commission,
+    format_article,
+    zine_articles,
+    zine_name,
+)
+from genzine.utils import h1, h2, to_camelcase
 
 load_dotenv(find_dotenv())
 
@@ -21,34 +24,25 @@ client = OpenAI()
 model = ChatOpenAI()
 
 article_parser = JsonOutputParser(pydantic_object=Article)
-format_article.partial_variables["format_instructions"] = article_parser.get_format_instructions()
+format_article.partial_variables["format_instructions"] = (
+    article_parser.get_format_instructions()
+)
 
 
 def name_zine() -> str:
     """Generates a name for the zine."""
-    get_name_chain = (
-        zine_name
-        | model
-        | StrOutputParser()
-    )
+    get_name_chain = zine_name | model | StrOutputParser()
 
     name = get_name_chain.invoke({"input": ""})
 
     return name
 
+
 def plan_articles(name: str) -> List[Article]:
     """Generates a list of articles based on the name."""
-    get_articles_chain = (
-        zine_articles
-        | model
-        | StrOutputParser()
-    )
+    get_articles_chain = zine_articles | model | StrOutputParser()
 
-    format_article_chain = (
-        format_article
-        | model
-        | article_parser
-    )
+    format_article_chain = format_article | model | article_parser
 
     article_blob = get_articles_chain.invoke({"zine_name": name})
 
@@ -66,41 +60,26 @@ def plan_articles(name: str) -> List[Article]:
 
 def write_article(zine_name: str, article: Article) -> str:
     """Writes an article based on its prompt."""
-    write_article_chain = (
-        create_article
-        | model
-        | StrOutputParser()
-    )
+    write_article_chain = create_article | model | StrOutputParser()
 
-    article_copy = write_article_chain.invoke({
-        "zine_name": zine_name,
-        "title": article.title,
-        "prompt": article.prompt
-    })
+    article_copy = write_article_chain.invoke(
+        {"zine_name": zine_name, "title": article.title, "prompt": article.prompt}
+    )
 
     return article_copy
 
 
 def commission_images(zine_name: str, article: Article) -> List[Image]:
     """Generates illustration prompts based on an article."""
-    commission_chain = (
-        create_commission
-        | model
-        | StrOutputParser()
-    )
+    commission_chain = create_commission | model | StrOutputParser()
 
-    image_blob = commission_chain.invoke({
-        "zine_name": zine_name,
-        "title": article.title,
-        "text": article.text
-    })
+    image_blob = commission_chain.invoke(
+        {"zine_name": zine_name, "title": article.title, "text": article.text}
+    )
 
     image_prompt_list = re.split(r"\d. ", image_blob, flags=0)
     image_prompt_list = [
-        img.strip() 
-        for img 
-        in image_prompt_list 
-        if len(img.strip()) > 0
+        img.strip() for img in image_prompt_list if len(img.strip()) > 0
     ]
 
     image_list = []
@@ -150,7 +129,7 @@ def zine_to_markdown(zine: Zine) -> str:
             out.append(para)
             img_rel_path = str(zine.asset_dir / article.filename / image.name)
             out.append(f"![{image.prompt}]({img_rel_path})")
-    
+
     return "\n\n".join(out)
 
 
@@ -195,7 +174,7 @@ if __name__ == "__main__":
 
     # Add the images #
     # -------------- #
-        
+
     # with open(ed_root / "zine_finished.json", "r") as f:
     #     zine = Zine.parse_raw(f.read())
 
@@ -212,4 +191,3 @@ if __name__ == "__main__":
 
     with open(ed_root / "README.md", "w") as f:
         f.write(zinedown)
-    
