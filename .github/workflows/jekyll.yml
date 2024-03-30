@@ -51,20 +51,22 @@ jobs:
           bundler-cache: true
 
       - name: Build site
+        working-directory: html
         run: bundle exec jekyll b -d "_site$"
         env:
           JEKYLL_ENV: "production"
 
       - name: Test site
+        working-directory: html
         run: |
           bundle exec htmlproofer _site \
             \-\-disable-external=true \
             \-\-ignore-urls "/^http:\/\/127.0.0.1/,/^http:\/\/0.0.0.0/,/^http:\/\/localhost/"
 
       - name: "Deploy to AWS S3"
-        working-directory: ./html
+        working-directory: html
         run: aws s3 sync ./_site/ s3://$ --delete --cache-control max-age=604800
 
       - name: "Create AWS Cloudfront Invalidation"
-        working-directory: ./html
+        working-directory: html
         run: aws cloudfront create-invalidation --distribution-id $ --paths "/*"
