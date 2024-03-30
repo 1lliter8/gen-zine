@@ -53,13 +53,13 @@ jobs:
       - name: Build site
         working-directory: html
         # run: bundle exec jekyll b -d "_site$"
-        run: rake build --trace
+        run: bundle exec rake build --trace
         env:
           JEKYLL_ENV: "production"
 
       - name: Test site
         working-directory: html
-        run: rake test --trace
+        run: bundle exec rake test --trace
         # run: |
         #   bundle exec htmlproofer _site \
         #     \-\-disable-external=true \
