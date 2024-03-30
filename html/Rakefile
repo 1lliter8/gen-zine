@@ -1,0 +1,22 @@
+require 'html-proofer'
+require 'jekyll'
+
+desc 'Remove all generated files: destination folder, metadata file, Sass and Jekyll caches.'
+task :clean do
+    Jekyll::Commands::Clean.process({})
+end
+
+desc 'Build the site'
+task build: [:clean] do
+    Jekyll::Commands::Build.process({})
+end
+
+desc 'Build and test the site'
+task test: [:build] do
+    options = {
+        :disable_external => true,
+        :check_html => true, # Validate HTML
+        :empty_alt_ignore => false, # Allow images with empty alt tags
+    }
+    HTMLProofer.check_directory("./_site", options).run
+end
