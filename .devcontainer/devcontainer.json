@@ -38,8 +38,8 @@
 	"remoteUser": "vscode",
 	"containerUser": "vscode",
 	"updateRemoteUserUID": true,
-	"workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,Z",
-	"workspaceFolder": "/workspace",
+	"workspaceMount": "source=${localWorkspaceFolder},target=/home/vscode/workspace,type=bind,Z",
+	"workspaceFolder": "/home/vscode/workspace",
 	"runArgs": [
 		"--userns=keep-id:uid=1000,gid=1000"
 	],
