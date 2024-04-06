@@ -17,6 +17,7 @@ task test: [:build] do
         :disable_external => true,
         :check_html => true, # Validate HTML
         :empty_alt_ignore => false, # Allow images with empty alt tags
+        :allow_missing_href => true # Share links have no href attribute
     }
     HTMLProofer.check_directory("./_site", options).run
 end

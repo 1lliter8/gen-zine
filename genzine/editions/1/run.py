@@ -7,8 +7,9 @@ from dotenv import find_dotenv, load_dotenv
 from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from langchain_openai import ChatOpenAI
 from openai import OpenAI
+from PIL import Image
 
-from genzine.models.docs import Article, Image, Zine
+from genzine.models.docs import Article, Zine
 from genzine.prompts.editorial import (
     create_article,
     create_commission,
@@ -24,7 +25,7 @@ client = OpenAI()
 model = ChatOpenAI()
 
 article_parser = JsonOutputParser(pydantic_object=Article)
-format_article.partial_variables["format_instructions"] = (
+format_article.partial_variables['format_instructions'] = (
     article_parser.get_format_instructions()
 )
 
@@ -33,7 +34,7 @@ def name_zine() -> str:
     """Generates a name for the zine."""
     get_name_chain = zine_name | model | StrOutputParser()
 
-    name = get_name_chain.invoke({"input": ""})
+    name = get_name_chain.invoke({'input': ''})
 
     return name
 
@@ -44,13 +45,13 @@ def plan_articles(name: str) -> List[Article]:
 
     format_article_chain = format_article | model | article_parser
 
-    article_blob = get_articles_chain.invoke({"zine_name": name})
+    article_blob = get_articles_chain.invoke({'zine_name': name})
 
-    article_blog_list = re.split(r"(?=\n\d)", article_blob, flags=0)
+    article_blog_list = re.split(r'(?=\n\d)', article_blob, flags=0)
     articles_object_list = []
 
     for article in article_blog_list:
-        article_formatted = format_article_chain.invoke({"article": article})
+        article_formatted = format_article_chain.invoke({'article': article})
         article_object = Article(**article_formatted)
         article_object.filename = to_camelcase(article_object.title)
         articles_object_list.append(article_object)
@@ -63,7 +64,7 @@ def write_article(zine_name: str, article: Article) -> str:
     write_article_chain = create_article | model | StrOutputParser()
 
     article_copy = write_article_chain.invoke(
-        {"zine_name": zine_name, "title": article.title, "prompt": article.prompt}
+        {'zine_name': zine_name, 'title': article.title, 'prompt': article.prompt}
     )
 
     return article_copy
@@ -74,10 +75,10 @@ def commission_images(zine_name: str, article: Article) -> List[Image]:
     commission_chain = create_commission | model | StrOutputParser()
 
     image_blob = commission_chain.invoke(
-        {"zine_name": zine_name, "title": article.title, "text": article.text}
+        {'zine_name': zine_name, 'title': article.title, 'text': article.text}
     )
 
-    image_prompt_list = re.split(r"\d. ", image_blob, flags=0)
+    image_prompt_list = re.split(r'\d. ', image_blob, flags=0)
     image_prompt_list = [
         img.strip() for img in image_prompt_list if len(img.strip()) > 0
     ]
@@ -85,7 +86,7 @@ def commission_images(zine_name: str, article: Article) -> List[Image]:
     image_list = []
 
     for prompt in image_prompt_list:
-        image_name = to_camelcase(prompt)[:30] + ".png"
+        image_name = to_camelcase(prompt)[:30] + '.png'
         image_list.append(Image(name=image_name, prompt=prompt))
 
     return image_list
@@ -98,18 +99,32 @@ def generate_images(article: Article, asset_dir: Path) -> None:
 
     for image in article.images:
         response = client.images.generate(
-            model="dall-e-3",
+            model='dall-e-3',
             prompt=image.prompt,
-            size="1024x1024",
-            quality="standard",
+            size='1024x1024',
+            quality='standard',
             n=1,
         )
 
         image_url = response.data[0].url
         image_raw = requests.get(image_url).content
 
-        with open(article_asset_dir / image.name, "wb") as f:
+        with open(article_asset_dir / image.name, 'wb') as f:
             f.write(image_raw)
+
+
+def png_to_compressed_jpg(edpath: Path) -> None:
+    """Converts an edition's PNGs to compressed JPGs."""
+
+    p = edpath.glob('**/*.png')
+    files = [x for x in p if x.is_file()]
+
+    for imgpath in files:
+        img = Image.open(imgpath)
+        rgb_img = img.convert('RGB')
+        imgpath_jpg = imgpath.with_suffix('.jpg')
+        rgb_img.save(imgpath_jpg, quality=95, optimize=True)
+        imgpath.unlink()
 
 
 def zine_to_markdown(zine: Zine) -> str:
@@ -124,17 +139,17 @@ def zine_to_markdown(zine: Zine) -> str:
 
     for article in zine.articles:
         out.append(h2(article.title))
-        paras = article.text.split("\n\n")
+        paras = article.text.split('\n\n')
         for para, image in zip(paras, article.images):
             out.append(para)
             img_rel_path = str(zine.asset_dir / article.filename / image.name)
-            out.append(f"![{image.prompt}]({img_rel_path})")
+            out.append(f'![{image.prompt}]({img_rel_path})')
 
-    return "\n\n".join(out)
+    return '\n\n'.join(out)
 
 
-if __name__ == "__main__":
-    ed_root = Path().cwd() / "genzine" / "editions" / "1"
+if __name__ == '__main__':
+    ed_root = Path().cwd() / 'genzine' / 'editions' / '1'
 
     # Generate the plan #
     # ----------------- #
@@ -184,10 +199,10 @@ if __name__ == "__main__":
     # Compile to markdown #
     # ------------------- #
 
-    with open(ed_root / "zine_finished.json", "r") as f:
+    with open(ed_root / 'zine_finished.json', 'r') as f:
         zine = Zine.parse_raw(f.read())
 
     zinedown = zine_to_markdown(zine=zine)
 
-    with open(ed_root / "README.md", "w") as f:
+    with open(ed_root / 'README.md', 'w') as f:
         f.write(zinedown)

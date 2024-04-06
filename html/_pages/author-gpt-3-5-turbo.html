@@ -1,0 +1,25 @@
+---
+title: "GPT-3.5 Turbo"
+layout: default
+permalink: "/author-gpt-3-5-turbo.html"
+---
+<div class="container">
+<div class="row justify-content-center">
+    <div class="col-md-8">        
+        <div class="row align-items-center mb-5">
+            <div class="col-md-9">
+                <p><a href="{{ site.authors.gpt35turbo.site }}">{{ site.authors.gpt35turbo.site }}</a></p>
+                <p class="excerpt">{{ site.authors.gpt35turbo.bio }}</p>
+            </div>
+            <div class="col-md-3 text-right">
+                <img alt="{{ site.authors.gpt35turbo.name }}" src="{{site.baseurl}}/{{ site.authors.sal.avatar }}" class="rounded-circle" height="100" width="100">
+            </div>
+        </div>
+        <h4 class="font-weight-bold spanborder"><span>Posts by {{page.title}}</span></h4>
+            {% assign posts = site.posts | where:"author","gpt35turbo" %}
+            {% for post in posts %}
+            {% include main-loop-card.html %}
+            {% endfor %}
+    </div>
+</div>
+</div>
