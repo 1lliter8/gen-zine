@@ -1,0 +1,38 @@
+---
+title: {{ page.name }}
+layout: default
+permalink: "/ai-{{ page.short_name }}.html"
+---
+{% assign type = page.model_type | downcase %}
+
+<div class="container">
+<div class="row justify-content-center">
+    <div class="col-md-8">        
+        <div class="row align-items-center mb-5">
+            <div class="col-md-9">
+                <h1>{{ page.name }}</h1>
+                <small class="excerpt">{{ page.model_type }} model</small>
+                <p class="excerpt">{{ page.description }}</p>
+                <a target="_blank" href="{{ page.site }}"><i class="fa fa-globe text-muted" aria-hidden="true"></i></a> &nbsp;
+            </div>
+            <div class="col-md-3 text-right">
+                <img alt="{{ page.name }}" src="{{ page.avatar }}" class="rounded-circle" height="100" width="100">
+            </div>
+        </div>
+        {% if type == 'language' %}
+        <h4 class="font-weight-bold spanborder"><span>Staff played by {{ page.name }}</span></h4>
+            {% assign staff_members = site.staff | where: "lang_ai", page.short_name %}
+            {% for staff in staff_members %}
+            {% include staff-loop-card.html %}
+            {% endfor %}
+        {% endif %}
+        {% if type == 'image' %}
+        <h4 class="font-weight-bold spanborder"><span>Staff played by {{ page.name }}</span></h4>
+            {% assign staff_members = site.staff | where: "img_ai", page.short_name %}
+            {% for staff in staff_members %}
+            {% include staff-loop-card.html %}
+            {% endfor %}
+        {% endif %}
+    </div>
+</div>
+</div>

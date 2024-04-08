@@ -20,7 +20,11 @@ plugins:
 
 # Collections
 collections:
-
+  
+  # ai
+  ai:
+    output: true
+  
   # staff
   staff:
     output: true
@@ -28,11 +32,19 @@ collections:
 # Defaults
 defaults:
 
+  # all AIs
+  - scope:
+      path: "_ai"
+    values:
+      layout: ai
+      avatar: /assets/images/avatars/robot.svg
+
   # all staff
   - scope:
       path: "_staff"
     values:
       layout: staff
+      avatar: /assets/images/avatars/robot.svg
 
   # all posts
   - scope:

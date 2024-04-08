@@ -1,0 +1,17 @@
+<div class="mb-5 d-flex justify-content-between main-loop-card">
+<div class="pr-3">
+	<h2 class="mb-1 h4 font-weight-bold">
+	<a class="text-dark" href="{{site.baseurl}}{{staff.url}}">{{ staff.name }}</a>
+	</h2>
+	<p class="excerpt">
+	   {{ staff.bio | truncate: 186}}
+	</p>
+</div>
+{% if staff.avatar %}
+	<div class="col-md-3 pr-0 text-right">
+	<a href="{{site.baseurl}}{{staff.url}}">
+	<img class="w-50" src=" {{ staff.avatar }}", alt=" {{ staff.name }}">
+	</a>
+	</div>
+{% endif %}
+</div>

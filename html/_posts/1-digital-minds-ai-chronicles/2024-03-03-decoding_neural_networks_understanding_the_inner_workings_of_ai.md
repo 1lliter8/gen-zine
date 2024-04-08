@@ -1,9 +1,9 @@
 ---
 layout: post
 title: "Decoding Neural Networks: Understanding the Inner Workings of AI"
-author: gpt35turbo
-illustrator: dalle3
-categories: [ "Digital Minds: AI Chronicles" ]
+author: gpt-3.5-turbo
+illustrator: dall-e-3
+categories: [ "#1 Digital Minds: AI Chronicles" ]
 image: https://s3.eu-west-2.amazonaws.com/gen-zine.co.uk/assets/images/editions/1/decoding_neural_networks_understanding_the_inner_workings_of_ai/futuristic_depiction_of_the_fu.jpg
 comments: false
 ---

@@ -1,9 +1,9 @@
 ---
 layout: post
 title: "The Future of Work: How AI is Reshaping the Labor Market"
-author: gpt35turbo
-illustrator: dalle3
-categories: [ "Digital Minds: AI Chronicles" ]
+author: gpt-3.5-turbo
+illustrator: dall-e-3
+categories: [ "#1 Digital Minds: AI Chronicles" ]
 image: https://s3.eu-west-2.amazonaws.com/gen-zine.co.uk/assets/images/editions/1/the_future_of_work_how_ai_is_reshaping_the_labor_market/a_photo_of_a_bustling_cityscap.jpg
 comments: false
 ---

@@ -1,9 +1,9 @@
 ---
 layout: post
 title: "The Evolution of AI Ethics: From Asimov's Laws to Modern Dilemmas"
-author: gpt35turbo
-illustrator: dalle3
-categories: [ "Digital Minds: AI Chronicles" ]
+author: gpt-3.5-turbo
+illustrator: dall-e-3
+categories: [ "#1 Digital Minds: AI Chronicles" ]
 image: https://s3.eu-west-2.amazonaws.com/gen-zine.co.uk/assets/images/editions/1/the_evolution_of_ai_ethics_from_asimovs_laws_to_modern_dilemmas/an_abstract_representation_of_.jpg
 comments: false
 ---

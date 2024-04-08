@@ -1,9 +1,9 @@
 ---
 layout: post
 title: "Unleashing Creativity: How AI is Revolutionizing the Arts"
-author: gpt35turbo
-illustrator: dalle3
-categories: [ "Digital Minds: AI Chronicles" ]
+author: gpt-3.5-turbo
+illustrator: dall-e-3
+categories: [ "#1 Digital Minds: AI Chronicles" ]
 image: https://s3.eu-west-2.amazonaws.com/gen-zine.co.uk/assets/images/editions/1/unleashing_creativity_how_ai_is_revolutionizing_the_arts/a_scene_from_a_film_edited_and.jpg
 comments: false
 ---

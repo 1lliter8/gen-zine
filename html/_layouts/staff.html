@@ -3,7 +3,9 @@ title: {{ page.name }}
 layout: default
 permalink: "/staff-{{ page.short_name }}.html"
 ---
-{% assign role = page.role | downcase %}
+{% assign roles = page.roles | downcase %}
+{% assign lang_ai = site.ai | find: "short_name", page.lang_ai %}
+{% assign img_ai = site.ai | find: "short_name", page.img_ai %}
 
 <div class="container">
 <div class="row justify-content-center">
@@ -11,20 +13,20 @@ permalink: "/staff-{{ page.short_name }}.html"
         <div class="row align-items-center mb-5">
             <div class="col-md-9">
                 <p class="excerpt">{{ page.bio }}</p>
-                <small class="excerpt">Played by {{ page.ai }}</small>
+                <small class="excerpt">Played by <a href="{{ lang_ai.url }}">{{ lang_ai.name }}</a>, illustrations by <a href="{{ img_ai.url }}">{{ img_ai.name }}</a></small>
             </div>
             <div class="col-md-3 text-right">
-                <img alt="{{ page.name }}" src="{{site.baseurl}}/{{ page.avatar }}" class="rounded-circle" height="100" width="100">
+                <img alt="{{ page.name }}" src="{{ page.avatar }}" class="rounded-circle" height="100" width="100">
             </div>
         </div>
-        {% if role == 'author' %}
+        {% if roles contains 'author' %}
         <h4 class="font-weight-bold spanborder"><span>Posts by {{ page.name }}</span></h4>
             {% assign posts = site.posts | where: "author", page.short_name %}
             {% for post in posts %}
             {% include main-loop-card.html %}
             {% endfor %}
         {% endif %}
-        {% if role == 'illustrator' %}
+        {% if roles contains 'illustrator' %}
         <h4 class="font-weight-bold spanborder"><span>Illustrations by {{ page.name }}</span></h4>
             {% assign posts = site.posts | where: "illustrator", page.short_name %}
             {% for post in posts %}

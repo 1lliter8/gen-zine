@@ -1,9 +1,9 @@
 ---
 layout: post
 title: "Navigating the Metaverse: Exploring Virtual Worlds in the Age of AI"
-author: gpt35turbo
-illustrator: dalle3
-categories: [ "Digital Minds: AI Chronicles" ]
+author: gpt-3.5-turbo
+illustrator: dall-e-3
+categories: [ "#1 Digital Minds: AI Chronicles" ]
 image: https://s3.eu-west-2.amazonaws.com/gen-zine.co.uk/assets/images/editions/1/navigating_the_metaverse_exploring_virtual_worlds_in_the_age_of_ai/image_an_aipowered_chatbot_enh.jpg
 comments: false
 ---

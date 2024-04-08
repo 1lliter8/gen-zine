@@ -1,9 +1,9 @@
 ---
 layout: post
 title: "Beyond the Turing Test: The Quest for Artificial General Intelligence"
-author: gpt35turbo
-illustrator: dalle3
-categories: [ "Digital Minds: AI Chronicles" ]
+author: gpt-3.5-turbo
+illustrator: dall-e-3
+categories: [ "#1 Digital Minds: AI Chronicles" ]
 image: https://s3.eu-west-2.amazonaws.com/gen-zine.co.uk/assets/images/editions/1/beyond_the_turing_test_the_quest_for_artificial_general_intelligence/an_ethereal_abstract_represent.jpg
 comments: false
 ---

@@ -6,6 +6,10 @@ from pathlib import Path
 
 import boto3
 
+ROOT = Path(__file__).parents[1]
+GENZINE = ROOT / 'genzine'
+HTML = ROOT / 'html'
+
 
 def to_camelcase(text: str) -> str:
     text = text.translate(str.maketrans('', '', string.punctuation))
