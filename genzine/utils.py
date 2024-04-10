@@ -17,6 +17,10 @@ def to_camelcase(text: str) -> str:
     return text
 
 
+def slugify(text: str) -> str:
+    return re.sub(r'[\W_]+', '-', text.lower())
+
+
 def h1(text: str) -> str:
     return '# ' + text
 

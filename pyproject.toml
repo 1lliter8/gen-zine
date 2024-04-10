@@ -24,6 +24,7 @@ pytest = "^8.0.2"
 ruff = "^0.3.0"
 pre-commit = "^3.6.2"
 pyfakefs = "^5.4.0"
+faker = "^24.7.1"
 
 [build-system]
 requires = ["poetry-core"]

@@ -381,6 +381,20 @@ files = [
 ]
 
 [[package]]
+name = "faker"
+version = "24.7.1"
+description = "Faker is a Python package that generates fake data for you."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "Faker-24.7.1-py3-none-any.whl", hash = "sha256:73f2bd886e8ce751e660c7d37a6c0a128aab5e1551359335bb79cfea0f4fabfc"},
+    {file = "Faker-24.7.1.tar.gz", hash = "sha256:39d34c63f0d62ed574161e23fe32008917b923d18098ce94c2650fe16463b7d5"},
+]
+
+[package.dependencies]
+python-dateutil = ">=2.4"
+
+[[package]]
 name = "filelock"
 version = "3.13.1"
 description = "A platform independent file lock."
@@ -2352,4 +2366,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "21c8ca6cac47aef9b77a51cc33f3b0a716e8d3acd91c5ccf07813951db94758c"
+content-hash = "421a771ad762370cc9b86962c39a5f4c8cf24b699e3f2aa1c59952973ff34ccc"
