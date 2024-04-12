@@ -7,9 +7,9 @@ from dotenv import find_dotenv, load_dotenv
 from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from langchain_openai import ChatOpenAI
 from openai import OpenAI
-from PIL import Image
+from PIL import Image as PILImage
 
-from genzine.models.docs import Article, Zine
+from genzine.models.editorial import Article, Image, Zine
 from genzine.prompts.editorial import (
     create_article,
     create_commission,
@@ -120,7 +120,7 @@ def png_to_compressed_jpg(edpath: Path) -> None:
     files = [x for x in p if x.is_file()]
 
     for imgpath in files:
-        img = Image.open(imgpath)
+        img = PILImage.open(imgpath)
         rgb_img = img.convert('RGB')
         imgpath_jpg = imgpath.with_suffix('.jpg')
         rgb_img.save(imgpath_jpg, quality=95, optimize=True)

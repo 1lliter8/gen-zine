@@ -1,4 +1,5 @@
 import random
+from datetime import date
 from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -6,8 +7,9 @@ from typing import Any, Callable, Optional
 import pytest
 from faker import Faker
 
+import genzine.models.editorial
 import genzine.models.staff
-from genzine.models.docs import Article, Image, Zine
+from genzine.models.editorial import Article, Image, Zine
 from genzine.models.staff import AIModel, ModelTypeEnum, RoleEnum, Staff
 from genzine.utils import slugify
 
@@ -31,11 +33,13 @@ def random_enums(enum: Enum) -> list[Any]:
 
 @pytest.fixture(scope='function')
 def genzine_fs(fs, monkeypatch):
-    mock_html = Path('/html')
+    mock_html: Path = Path('/html')
     fs.create_dir(mock_html / '_ai')
     fs.create_dir(mock_html / '_staff')
+    fs.create_dir(mock_html / '_posts')
 
     monkeypatch.setattr(genzine.models.staff, 'HTML', mock_html)
+    monkeypatch.setattr(genzine.models.editorial, 'HTML', mock_html)
 
     yield fs, monkeypatch
 
@@ -46,14 +50,14 @@ def ai_factory(genzine_fs) -> Callable:
         retired: bool = False,
         model_type: Optional[ModelTypeEnum] = None,
     ) -> AIModel:
-        name = ' '.join(fake.words(nb=3, part_of_speech='noun')).title()
+        name: str = ' '.join(fake.words(nb=3, part_of_speech='noun')).title()
 
         retired_date = None
         if retired:
-            retired_date = fake.date_object()
+            retired_date: date = fake.date_object()
 
         if model_type is None:
-            model_type = random_enum(ModelTypeEnum)
+            model_type: str = random_enum(ModelTypeEnum)
 
         return AIModel(
             short_name=slugify(name),
@@ -77,18 +81,18 @@ def staff_factory(genzine_fs, ai_factory):
         lang_ai: Optional[AIModel] = None,
         img_ai: Optional[AIModel] = None,
     ) -> Staff:
-        name = fake.name()
+        name: str = fake.name()
 
         if lang_ai is None:
-            lang_ai = ai_factory(model_type='Language')
+            lang_ai: AIModel = ai_factory(model_type='Language')
             lang_ai.to_bio_page()
 
         if img_ai is None:
-            img_ai = ai_factory(model_type='Image')
+            img_ai: AIModel = ai_factory(model_type='Image')
             img_ai.to_bio_page()
 
         if roles is None:
-            roles = random_enums(RoleEnum)
+            roles: list[str] = random_enums(RoleEnum)
 
         return Staff(
             short_name=slugify(name),
@@ -109,7 +113,7 @@ def staff_factory(genzine_fs, ai_factory):
 @pytest.fixture(scope='function')
 def image_factory(genzine_fs):
     def _image_factory() -> Image:
-        name = fake.file_name(extension='jpg')
+        name: str = fake.file_name(extension='jpg')
 
         return Image(
             file_name=name,
@@ -125,26 +129,35 @@ def article_factory(genzine_fs, image_factory, staff_factory):
     def _article_factory(
         author: Optional[Staff] = None,
         illustrator: Optional[Staff] = None,
+        categories: Optional[list[str]] = None,
     ) -> Article:
-        image_count = fake.random_int(max=4, min=1)
-        name = fake.sentence(nb_words=10).title()[:-1]
+        image_count: int = fake.random_int(max=5, min=2)
+        name: str = fake.sentence(nb_words=10).title()[:-1]
+        path = Path(slugify(f'{str(date.today())} {name}') + '.md')
 
         if author is None:
-            author = staff_factory(roles=['Author'])
+            author: Staff = staff_factory(roles=['Author'])
             author.to_bio_page()
 
         if illustrator is None:
-            illustrator = staff_factory(roles=['Illustrator'])
+            illustrator: Staff = staff_factory(roles=['Illustrator'])
             illustrator.to_bio_page()
+
+        if categories is None:
+            edition_name: str = ' '.join(fake.words(nb=5)).title()
+            edition_number: int = fake.random_int(min=1, max=10)
+            category: str = f'#{edition_number} {edition_name}'
+            categories: list[str] = [category]
 
         return Article(
             title=name,
-            path=Path(slugify(name)),
+            path=path,
             prompt=fake.sentence(nb_words=10),
-            text='\n\n'.join(fake.paragraphs()),
-            images=[image_factory() for i in range(image_count)],
+            text='\n\n'.join(fake.paragraphs(nb=5)),
+            images=[image_factory() for _ in range(image_count)],
             author=author.short_name,
             illustrator=illustrator.short_name,
+            categories=categories,
         )
 
     return _article_factory
@@ -153,13 +166,19 @@ def article_factory(genzine_fs, image_factory, staff_factory):
 @pytest.fixture(scope='function')
 def zine_factory(genzine_fs, article_factory, ai_factory, staff_factory):
     def _zine_factory() -> Zine:
-        name = ' '.join(fake.words(nb=5)).title()
+        mock_html: Path = Path('/html')
+        mock_posts: Path = mock_html / '_posts'
 
-        img_ais = [
+        name: str = ' '.join(fake.words(nb=5)).title()
+        edition: int = len(list(mock_posts.glob('*/'))) + 1
+        path: Path = Path(slugify(f'{edition} {name}'))
+        category: str = f'#{edition} {name}'
+
+        img_ais: list[AIModel] = [
             ai_factory(model_type='Image')
             for ai in range(fake.random_int(max=3, min=1))
         ]
-        lang_ais = [
+        lang_ais: list[AIModel] = [
             ai_factory(model_type='Language')
             for ai in range(fake.random_int(max=3, min=1))
         ]
@@ -167,37 +186,40 @@ def zine_factory(genzine_fs, article_factory, ai_factory, staff_factory):
         for ai in img_ais + lang_ais:
             ai.to_bio_page()
 
-        staff_list = [
+        staff_list: list[Staff] = [
             staff_factory(
                 roles=['Author', 'Editor', 'Illustrator'],
                 lang_ai=random.choice(lang_ais),
                 img_ai=random.choice(img_ais),
             )
-            for i in range(10)
+            for _ in range(10)
         ]
 
         for staff in staff_list:
             staff.to_bio_page()
 
-        editor = staff_list[0]
-        authors = staff_list[1:7]
-        illustrators = staff_list[7:10]
+        editor: Staff = staff_list[0]
+        authors: list[Staff] = staff_list[1:7]
+        illustrators: list[Staff] = staff_list[7:10]
 
-        article_list = [
+        article_list: list[Article] = [
             article_factory(
-                author=random.choice(authors), illustrator=random.choice(illustrators)
+                author=random.choice(authors),
+                illustrator=random.choice(illustrators),
+                categories=[category],
             )
-            for i in range(5)
+            for _ in range(5)
         ]
 
-        board_names = [ai.short_name for ai in lang_ais]
-        editor_name = editor.short_name
-        author_names = [author.short_name for author in authors]
-        illustrator_names = [illus.short_name for illus in illustrators]
+        board_names: list[str] = [ai.short_name for ai in lang_ais]
+        editor_name: str = editor.short_name
+        author_names: list[str] = [author.short_name for author in authors]
+        illustrator_names: list[str] = [illus.short_name for illus in illustrators]
 
         return Zine(
             name=name,
-            path=Path(slugify(str(fake.random_int(max=10, min=1)) + ' ' + name)),
+            edition=edition,
+            path=path,
             board=board_names,
             editor=editor_name,
             authors=author_names,
