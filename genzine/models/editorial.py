@@ -1,5 +1,6 @@
 import json
 import re
+from enum import Enum
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import List, Optional
@@ -10,6 +11,11 @@ from pydantic.v1 import BaseModel, Field, HttpUrl, validator
 
 from genzine.models.staff import AIModel, Staff
 from genzine.utils import HTML
+
+
+class TagEnum(str, Enum):
+    sticky = 'sticky'
+    featured = 'featured'
 
 
 class ImgParser(HTMLParser):
@@ -67,10 +73,10 @@ class Article(BaseModel):
     author: str = Field(description='short name of article author')
     illustrator: str = Field(description='short name of article illustrator')
     categories: list[str] = Field(
-        description=(
-            'categories to use for the article. '
-            "Usually the edition and if it's featured"
-        )
+        description=('categories to use for the article, usually the edition')
+    )
+    tags: Optional[list[TagEnum]] = Field(
+        default=None, description='used to stick or feature an article'
     )
     layout: str = Field(default='post', description='Jekyll layout to use')
     comments: bool = Field(default=False, description='whether comments are turned on')

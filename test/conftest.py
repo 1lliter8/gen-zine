@@ -9,7 +9,7 @@ from faker import Faker
 
 import genzine.models.editorial
 import genzine.models.staff
-from genzine.models.editorial import Article, Image, Zine
+from genzine.models.editorial import Article, Image, TagEnum, Zine
 from genzine.models.staff import AIModel, ModelTypeEnum, RoleEnum, Staff
 from genzine.utils import slugify
 
@@ -22,13 +22,13 @@ def random_enum(enum: Enum) -> Any:
     return random.choice(enum_values)
 
 
-def random_enums(enum: Enum) -> list[Any]:
+def random_enums(enum: Enum, min: int = 1) -> list[Any]:
     """Returns a random number of random items from an Enum class.
 
     Without replacement.
     """
     enum_values = [e.value for e in enum]
-    return random.sample(enum_values, k=fake.random_int(max=len(enum), min=1))
+    return random.sample(enum_values, k=fake.random_int(max=len(enum), min=min))
 
 
 @pytest.fixture(scope='function')
@@ -158,6 +158,7 @@ def article_factory(genzine_fs, image_factory, staff_factory):
             author=author.short_name,
             illustrator=illustrator.short_name,
             categories=categories,
+            tags=random_enums(enum=TagEnum, min=0),
         )
 
     return _article_factory

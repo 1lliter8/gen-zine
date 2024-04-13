@@ -9,7 +9,7 @@ baseurl: ''
 # mailchimp-list: ''
 
 include: ["_pages"]
-permalink: /:title/
+permalink: /posts/:slugified_categories/:title/
 
 # Plugins
 plugins: 
