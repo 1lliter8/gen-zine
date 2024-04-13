@@ -3,7 +3,7 @@ title: {{ page.name }}
 layout: default
 permalink: "/ai-{{ page.short_name }}.html"
 ---
-{% assign type = page.model_type | downcase %}
+{% assign type = page.ai_type | downcase %}
 
 <div class="container">
 <div class="row justify-content-center">
@@ -11,7 +11,7 @@ permalink: "/ai-{{ page.short_name }}.html"
         <div class="row align-items-center mb-5">
             <div class="col-md-9">
                 <h1>{{ page.name }}</h1>
-                <small class="excerpt">{{ page.model_type }} model</small>
+                <small class="excerpt">{{ page.ai_type }} model</small>
                 <p class="excerpt">{{ page.description }}</p>
                 <a target="_blank" href="{{ page.site }}"><i class="fa fa-globe text-muted" aria-hidden="true"></i></a> &nbsp;
             </div>

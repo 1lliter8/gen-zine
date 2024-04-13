@@ -1,52 +1,71 @@
-from pathlib import Path
+from io import BytesIO
 
 import requests
 from dotenv import find_dotenv, load_dotenv
+from langchain_community.chat_models import ChatLiteLLM
 from langchain_core.output_parsers import StrOutputParser
-from langchain_openai import ChatOpenAI
-from openai import OpenAI
+from litellm import image_generation
+from PIL import Image as PILImage
 
-from genzine.models.staff import Staff
-from genzine.prompts.staff import staff_bio, staff_name
-from genzine.utils import to_camelcase
+from genzine.models.staff import AIModel, RoleEnum, Staff
+from genzine.prompts.staff import avatar, bio, name, new, style
+from genzine.utils import HTML, slugify
 
 load_dotenv(find_dotenv())
 
-client = OpenAI()
-model = ChatOpenAI()
 
+def create_staff_member(
+    lang_ai: AIModel, img_ai: AIModel, roles: list[RoleEnum]
+) -> Staff:
+    """Creates a new staff member."""
+    lang_model = ChatLiteLLM(model=lang_ai.short_name, temperature=1)
 
-def create_staff_member(ai: str, role: str) -> Staff:
-    """Generates a bio for a writer."""
-    get_bio_chain = staff_bio | model | StrOutputParser()
-    get_name_chain = staff_name | model | StrOutputParser()
+    get_long_bio_chain = new | lang_model | StrOutputParser()
+    get_bio_chain = bio | lang_model | StrOutputParser()
+    get_name_chain = name | lang_model | StrOutputParser()
+    get_style_chain = style | lang_model | StrOutputParser()
 
-    bio = get_bio_chain.invoke({'ai': ai, 'role': role})
-    name = get_name_chain.invoke({'bio': bio})
+    staff_long_bio = get_long_bio_chain.invoke({})
+    staff_bio = get_bio_chain.invoke({'long_bio': staff_long_bio}).strip()
+    staff_name = get_name_chain.invoke({'bio': staff_bio}).strip()
+    staff_style = get_style_chain.invoke({'bio': staff_bio}).strip()
 
-    avatar_dir = (
-        Path().cwd() / 'mundana' / 'assets' / 'images' / 'avatars' / to_camelcase(name)
-        + '.png'
+    return Staff(
+        short_name=slugify(staff_name),
+        name=staff_name,
+        roles=roles,
+        lang_ai=lang_ai.short_name,
+        img_ai=img_ai.short_name,
+        bio=staff_bio,
+        style=staff_style,
     )
 
-    response = client.images.generate(
-        model='dall-e-3',
-        prompt=f'An avatar for {bio}. Their name is {name}.',
-        size='256x256',
-        quality='standard',
-        n=1,
+
+def draw_staff_member(staff: Staff) -> PILImage:
+    gen_response = image_generation(
+        prompt=avatar.format(bio=staff.bio, style=staff.style),
+        model=staff.img_ai,
+        size='1024x1024',
     )
+    img_response = requests.get(gen_response.data[0]['url'])
 
-    image_url = response.data[0].url
-    image_raw = requests.get(image_url).content
+    img = PILImage.open(BytesIO(img_response.content))
+    rgb_img = img.convert('RGB')
+    img_sml = rgb_img.resize(size=(256, 256))
 
-    with open(avatar_dir, 'wb') as f:
-        f.write(image_raw)
-
-    staff = Staff(ai=ai, role=role, bio=bio, name=name, avatar=avatar_dir)
-
-    return staff
+    return img_sml
 
 
 if __name__ == '__main__':
-    pass
+    lang_ai = AIModel.from_bio_page('gpt-3.5-turbo')
+    img_ai = AIModel.from_bio_page('dall-e-3')
+    roles = ['Author', 'Illustrator', 'Editor']
+
+    staff = create_staff_member(lang_ai=lang_ai, img_ai=img_ai, roles=roles)
+    print(staff)
+
+    avatar = draw_staff_member(staff=staff)
+
+    save_path = HTML / f'assets/images/avatars/staff/{staff.short_name}.jpg'
+
+    avatar.save(fp=save_path)

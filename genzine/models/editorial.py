@@ -159,7 +159,7 @@ class Zine(BaseModel):
     def check_ai(cls, v):
         for ai_name in v:
             model = AIModel.from_bio_page(short_name=ai_name)
-            if model.model_type != 'Language':
+            if model.ai_type != 'Language':
                 raise ValueError('f{model.short_name}: board must be language models')
             return v
 

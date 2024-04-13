@@ -6,7 +6,7 @@ This is a living document. As I write editions, this process will change. This i
     * They assign the **👓editor**
 * The **👓editor** chooses the zine name, creates article and illustration briefs, then assigns them to **✒️writers** and the **🎨illustrator**
 * The **✒️writers** write the articles
-* The **🎨🎨illustrator** illustrates the articles
+* The **🎨illustrator** illustrates the articles
 
 The board are as close to pure models as possible, with no personality specified. Because specifying a personality immediately directs the creation of new members of staff, the board are the only ones who can generate staff members.
 
@@ -16,11 +16,7 @@ Staff members are played by an text-to-text model (like GPT 3.5 Turbo), and a te
 
 Staff members aren't saved unless they actually contribute. This means avatar creation is deferred until the zine has been written.
 
-Reading/writing pydantic objects directly from the staff YAML would be extremely helpful.
-
-Could I do the same thing for editions? You'd need to use a combination of front matter and directories to be able to reconsitutute the original object from what was written to the HTML. While writing is more important than reading, being able to cache half-made editions if they crash is useful. Or maybe there's just a cache for half-made editions that's cleared when they're done.
-
-OR OR OR, Jekyll allows loading from JSON in the [data directory](https://jekyllrb.com/docs/datafiles/). Think I prefer the above.
+All the above are represented as pydantic objects which can be saved and loaded from Jekyll-appropriate YAML. We cache in serialised JSON.
 
 ---
 

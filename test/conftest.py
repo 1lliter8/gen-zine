@@ -48,7 +48,7 @@ def genzine_fs(fs, monkeypatch):
 def ai_factory(genzine_fs) -> Callable:
     def _ai_factory(
         retired: bool = False,
-        model_type: Optional[ModelTypeEnum] = None,
+        ai_type: Optional[ModelTypeEnum] = None,
     ) -> AIModel:
         name: str = ' '.join(fake.words(nb=3, part_of_speech='noun')).title()
 
@@ -56,14 +56,14 @@ def ai_factory(genzine_fs) -> Callable:
         if retired:
             retired_date: date = fake.date_object()
 
-        if model_type is None:
-            model_type: str = random_enum(ModelTypeEnum)
+        if ai_type is None:
+            ai_type: str = random_enum(ModelTypeEnum)
 
         return AIModel(
             short_name=slugify(name),
             name=name,
             site=fake.url(),
-            model_type=model_type,
+            ai_type=ai_type,
             description=fake.sentence(nb_words=10),
             avatar=Path(
                 '/assets/images/avatars/ai/' + fake.file_name(category='image')
@@ -84,11 +84,11 @@ def staff_factory(genzine_fs, ai_factory):
         name: str = fake.name()
 
         if lang_ai is None:
-            lang_ai: AIModel = ai_factory(model_type='Language')
+            lang_ai: AIModel = ai_factory(ai_type='Language')
             lang_ai.to_bio_page()
 
         if img_ai is None:
-            img_ai: AIModel = ai_factory(model_type='Image')
+            img_ai: AIModel = ai_factory(ai_type='Image')
             img_ai.to_bio_page()
 
         if roles is None:
@@ -176,11 +176,10 @@ def zine_factory(genzine_fs, article_factory, ai_factory, staff_factory):
         category: str = f'#{edition} {name}'
 
         img_ais: list[AIModel] = [
-            ai_factory(model_type='Image')
-            for ai in range(fake.random_int(max=3, min=1))
+            ai_factory(ai_type='Image') for ai in range(fake.random_int(max=3, min=1))
         ]
         lang_ais: list[AIModel] = [
-            ai_factory(model_type='Language')
+            ai_factory(ai_type='Language')
             for ai in range(fake.random_int(max=3, min=1))
         ]
 

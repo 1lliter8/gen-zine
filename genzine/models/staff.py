@@ -27,7 +27,7 @@ class AIModel(BaseModel):
     )
     name: str = Field(description="the model's name")
     site: HttpUrl = Field(description="URL of the model's site")
-    model_type: ModelTypeEnum = Field(description='the type of this model')
+    ai_type: ModelTypeEnum = Field(description='the type of this model')
     description: str = Field(
         description="a brief description of this model's provenance"
     )
@@ -77,14 +77,14 @@ class Staff(BaseModel):
     @validator('lang_ai')
     def lang_ai_must_be_language_model(cls, v):
         model = AIModel.from_bio_page(short_name=v)
-        if model.model_type != 'Language':
+        if model.ai_type != 'Language':
             raise ValueError('lang_ai must be a language model')
         return v
 
     @validator('img_ai')
     def img_ai_must_be_language_model(cls, v):
         model = AIModel.from_bio_page(short_name=v)
-        if model.model_type != 'Image':
+        if model.ai_type != 'Image':
             raise ValueError('img_ai must be an image model')
         return v
 
