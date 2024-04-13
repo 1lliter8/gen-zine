@@ -64,7 +64,7 @@ jobs:
 
       - name: "Deploy to AWS S3"
         working-directory: html
-        run: aws s3 sync ./_site/ s3://${{ env.S3_NAME }} --delete --cache-control max-age=604800 --exclude ./_site/assets/images/editions
+        run: aws s3 sync ./_site/ s3://${{ env.S3_NAME }} --delete --cache-control max-age=604800 --exclude "assets/images/editions/*"
 
       - name: "Create AWS Cloudfront Invalidation"
         working-directory: html
