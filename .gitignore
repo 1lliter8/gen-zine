@@ -1,5 +1,7 @@
 # Jekyll
 _site
+html/assets/images/avatars/staff
+html/assets/images/editions
 
 # Mac stuff
 .DS_Store

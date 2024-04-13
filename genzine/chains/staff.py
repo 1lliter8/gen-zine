@@ -1,5 +1,6 @@
 from io import BytesIO
 
+import boto3
 import requests
 from dotenv import find_dotenv, load_dotenv
 from langchain_community.chat_models import ChatLiteLLM
@@ -56,6 +57,22 @@ def draw_staff_member(staff: Staff) -> PILImage:
     return img_sml
 
 
+def avatar_to_s3(img: PILImage, short_name: str) -> str:
+    """Saves avatar to S3 and returns the URL."""
+    s3 = boto3.client('s3')
+
+    f = BytesIO()
+    img.save(f, format='jpeg', quality=95)
+    f.seek(0)
+
+    bucket: str = 'gen-zine.co.uk'
+    key: str = f'assets/images/avatars/staff/{short_name}.jpg'
+
+    s3.upload_fileobj(Fileobj=f, Bucket=bucket, Key=key)
+
+    return f'https://s3.eu-west-2.amazonaws.com/{bucket}/{key}'
+
+
 if __name__ == '__main__':
     lang_ai = AIModel.from_bio_page('gpt-3.5-turbo')
     img_ai = AIModel.from_bio_page('dall-e-3')
@@ -69,3 +86,9 @@ if __name__ == '__main__':
     save_path = HTML / f'assets/images/avatars/staff/{staff.short_name}.jpg'
 
     avatar.save(fp=save_path)
+
+    url = avatar_to_s3(img=avatar, short_name=staff.short_name)
+
+    print(url)
+
+    staff.avatar = url

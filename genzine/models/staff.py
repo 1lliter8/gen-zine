@@ -60,8 +60,8 @@ class Staff(BaseModel):
     short_name: str = Field(description="the staff member's slugified name")
     name: str = Field(description="the staff member's name")
     roles: list[RoleEnum] = Field(description='roles the staff member has played')
-    avatar: Optional[Path] = Field(
-        default=None, description="file path of the staff member's avatar"
+    avatar: Optional[HttpUrl] = Field(
+        default=None, description="URL of the staff member's avatar"
     )
     lang_ai: str = Field(
         description='the short name of the language model that plays this staff member'

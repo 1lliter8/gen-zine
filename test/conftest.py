@@ -98,9 +98,7 @@ def staff_factory(genzine_fs, ai_factory):
             short_name=slugify(name),
             name=name,
             roles=roles,
-            avatar=Path(
-                '/assets/images/avatars/staff/' + fake.file_name(category='image')
-            ),
+            avatar=f"{fake.url()}{fake.uri_path()}/{fake.file_name(category='image')}",
             lang_ai=lang_ai.short_name,
             img_ai=img_ai.short_name,
             bio=fake.sentence(nb_words=10),
