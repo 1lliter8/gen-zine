@@ -15,7 +15,7 @@ style = ChatPromptTemplate.from_template(
     '\n\n'
     'Make up an illustration style this person uses. '
     'Describe the emotion, palette and mood. '
-    'Use real artistic movements as reference. '
+    'Use real artists and artistic movements as reference. '
     'Do not explain why it suits them. '
     'Only explain the style. '
     'Use 30 words or less. '
@@ -23,3 +23,17 @@ style = ChatPromptTemplate.from_template(
 )
 
 avatar = PromptTemplate.from_template('{bio} {style}')
+
+choose_player = ChatPromptTemplate.from_template(
+    'You are: {bio}\n\n'
+    'Choose an item from this list to play you. '
+    'Do not explain your choice, just choose. \n\n'
+    'Instructions: {instructions}"'
+)
+
+choose_editor = ChatPromptTemplate.from_template(
+    'Choose a member of staff from this list to edit a zine. '
+    'Your choices are: \n\n {choices} \n\n'
+    'Do note explain your choice, just choose. \n\n'
+    'Instructions: {instructions}'
+)
