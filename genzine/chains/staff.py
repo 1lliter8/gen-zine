@@ -7,11 +7,6 @@ from typing import Optional
 import boto3
 import requests
 from dotenv import find_dotenv, load_dotenv
-from langchain.output_parsers import OutputFixingParser
-from langchain.output_parsers.enum import EnumOutputParser
-from langchain_community.chat_models import ChatLiteLLM
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables.base import RunnableSerializable
 from litellm import image_generation
 from PIL import Image as PILImage
 
@@ -19,10 +14,21 @@ from genzine.models.staff import AIModel, ModelTypeEnum, Staff
 from genzine.prompts import staff as staff_prompts
 from genzine.utils import HTML, slugify
 
+from langchain.output_parsers import OutputFixingParser
+from langchain.output_parsers.enum import EnumOutputParser
+from langchain_community.chat_models import ChatLiteLLM
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables.base import RunnableSerializable
+
 load_dotenv(find_dotenv())
 
 
 def load_all_ais() -> dict[str, list[AIModel]]:
+    """Loads all AIs listed on the website.
+
+    Returns a dictionary keyed to model type, with a list of AIs of that type.
+    """
     ais = [AIModel.from_bio_page(p.stem) for p in (HTML / '_ai').glob('*.md')]
 
     res = {'lang_ais': [], 'img_ais': []}
@@ -37,6 +43,7 @@ def load_all_ais() -> dict[str, list[AIModel]]:
 
 
 def create_board(n: Optional[int] = None) -> list[AIModel]:
+    """Returns a random selection of language AIs to be the board."""
     lang_ais = load_all_ais().get('lang_ais')
     k = random.randint(1, len(lang_ais)) if n is None else n
 
@@ -44,6 +51,11 @@ def create_board(n: Optional[int] = None) -> list[AIModel]:
 
 
 def make_choose_player_chain(ai: AIModel, type: ModelTypeEnum) -> RunnableSerializable:
+    """Returns a LanChain chain that chooses an AI to play a staff member.
+
+    Uses the specified model to fix the output to conform to a custom enum of AI by
+    type.
+    """
     all_ais = load_all_ais()
 
     if type.lower() == 'image':
@@ -96,6 +108,7 @@ def create_staff_member(ai: AIModel) -> Staff:
 
 
 def create_staff_pool(board: list[AIModel], n: int) -> list[Staff]:
+    """Uses a random selection of board members to create a staff pool."""
     pool: list[Staff] = []
     for _ in range(n):
         pool.append(create_staff_member(ai=random.choice(board)))
@@ -103,6 +116,7 @@ def create_staff_pool(board: list[AIModel], n: int) -> list[Staff]:
 
 
 def draw_staff_member(staff: Staff) -> PILImage:
+    """Gets a staff member to draw an avatar of themselves."""
     gen_response = image_generation(
         prompt=staff_prompts.avatar.format(bio=staff.bio, style=staff.style),
         model=staff.img_ai,
@@ -117,21 +131,39 @@ def draw_staff_member(staff: Staff) -> PILImage:
     return img_sml
 
 
-def make_choose_editor_chain(ai: AIModel, pool: list[Staff]) -> RunnableSerializable:
+def make_choose_staff_chain(
+    ai: AIModel | Staff, pool: list[Staff], prompt: ChatPromptTemplate
+) -> RunnableSerializable:
+    """Returns a LanChain chain that chooses a member of staff for a job.
+
+    Uses the specified model to fix the output to conform to a custom enum of Staff.
+
+    The supplied prompt template must contain a variable for instructions.
+    """
+    assert 'instructions' in prompt.input_schema.__fields__
+
+    if isinstance(ai, AIModel):
+        model_slug = ai.short_name
+    elif isinstance(ai, Staff):
+        model_slug = ai.lang_ai
+    else:
+        ValueError('ai must be object of class AIModel or Staff')
+
+    model = ChatLiteLLM(model=model_slug, temperature=1)
+
     StaffEnum = Enum(
         'StaffEnum', {staff.short_name: staff.short_name for staff in pool}
     )
 
-    model = ChatLiteLLM(model=ai.short_name, temperature=1)
     parser = EnumOutputParser(enum=StaffEnum)
-    prompt = staff_prompts.choose_editor.partial(
+    prompt_with_instructions = prompt.partial(
         instructions=parser.get_format_instructions()
     )
     fixing_parser = OutputFixingParser.from_llm(parser=parser, llm=model)
 
-    choose_editor_chain = prompt | model | fixing_parser
+    choose_chain = prompt_with_instructions | model | fixing_parser
 
-    return choose_editor_chain
+    return choose_chain
 
 
 def choose_editor(
@@ -139,11 +171,22 @@ def choose_editor(
     pool: list[Staff],
     counter: Counter = Counter(),
     max_votes: int = 10,
-) -> Staff:
+) -> tuple[Staff, list[Staff]]:
+    """Uses the board and staff pool to choose an editor.
+
+    A counter of votes that recurses until someone wins, or the max votes are hit.
+
+    In a tie at max votes, the editor who was suggested first is chosen -- the
+    default behaviour of collections.Counter.
+
+    Returns the chosen editor with the new role, and the staff pool with them removed.
+    """
     choices_str = '\n\n'.join([f'* {staff.short_name}: {staff.bio}' for staff in pool])
 
     for ai in board:
-        choose_editor_chain = make_choose_editor_chain(ai=ai, pool=pool)
+        choose_editor_chain = make_choose_staff_chain(
+            ai=ai, pool=pool, prompt=staff_prompts.choose_editor
+        )
         editor_str = choose_editor_chain.invoke({'choices': choices_str}).value
         counter.update([editor_str])
 
@@ -155,9 +198,13 @@ def choose_editor(
         chosen_editor_str = counter.most_common(n=1)[0][0]
         choices_dict = {staff.short_name: staff for staff in pool}
         editor = choices_dict.get(chosen_editor_str)
-        if 'Editor' not in editor.roles:
-            editor.roles.append('Editor')
-        return editor
+        editor.roles.update(['Editor'])
+
+        reduced_pool = [
+            staff for staff in pool if staff.short_name != editor.short_name
+        ]
+
+        return editor, reduced_pool
 
 
 def avatar_to_s3(img: PILImage, short_name: str) -> str:
@@ -181,9 +228,11 @@ if __name__ == '__main__':
 
     pool = create_staff_pool(board=board, n=3)
 
-    editor = choose_editor(board=board, pool=pool)
+    editor, pool = choose_editor(board=board, pool=pool)
 
     print(editor)
+
+    editor.to_bio_page()
 
     # avatar = draw_staff_member(staff=staff)
 

@@ -4,8 +4,6 @@ from typing import List
 
 import requests
 from dotenv import find_dotenv, load_dotenv
-from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
-from langchain_openai import ChatOpenAI
 from openai import OpenAI
 from PIL import Image as PILImage
 
@@ -18,6 +16,9 @@ from genzine.prompts.editorial import (
     zine_name,
 )
 from genzine.utils import h1, h2, to_camelcase
+
+from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
+from langchain_openai import ChatOpenAI
 
 load_dotenv(find_dotenv())
 

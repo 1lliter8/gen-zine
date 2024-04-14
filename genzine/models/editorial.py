@@ -58,20 +58,26 @@ class Image(BaseModel):
         )
 
 
-class Article(BaseModel):
+class ArticlePrompt(BaseModel):
     title: str = Field(description='title of the article')
+    prompt: str = Field(description='descriptive article summary to prompt the writer')
+
+
+class ArticleAssigned(ArticlePrompt):
+    author: str = Field(description='short name of article author')
+    illustrator: str = Field(description='short name of article illustrator')
+
+
+class Article(ArticleAssigned):
     path: Optional[Path] = Field(
         description='path to the article. Must begin with a date and end with .md'
     )
-    prompt: str = Field(description='descriptive article summary to prompt the writer')
     text: Optional[str] = Field(
         description='full text of the article in markdown format'
     )
     images: Optional[List[Image]] = Field(
         description='list of images that will go with the article'
     )
-    author: str = Field(description='short name of article author')
-    illustrator: str = Field(description='short name of article illustrator')
     categories: list[str] = Field(
         description=('categories to use for the article, usually the edition')
     )

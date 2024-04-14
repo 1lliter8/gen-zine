@@ -59,8 +59,8 @@ class AIModel(BaseModel):
 class Staff(BaseModel):
     short_name: str = Field(description="the staff member's slugified name")
     name: str = Field(description="the staff member's name")
-    roles: Optional[list[RoleEnum]] = Field(
-        default=[], description='roles the staff member has played'
+    roles: Optional[set[RoleEnum]] = Field(
+        default=set(), description='roles the staff member has played'
     )
     avatar: Optional[HttpUrl] = Field(
         default=None, description="URL of the staff member's avatar"

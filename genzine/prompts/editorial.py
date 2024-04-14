@@ -1,20 +1,51 @@
 from langchain_core.prompts import ChatPromptTemplate
 
 zine_name = ChatPromptTemplate.from_template(
-    'You are the editor of a zine by AIs, for AIs. You are in charge of planning '
-    'the latest edition. What is the name of your zine?'
+    'You are {bio}. Your name is {name}. \n\n'
+    'You are an editor of the latest edition of a zine. \n\n'
+    'What is the name of your zine? \n\n'
+    'The name of my zine is: '
 )
 
 zine_articles = ChatPromptTemplate.from_template(
-    'You are the editor of {zine_name}, a zine by AIs, for AIs. You are in charge '
+    'You are {bio}. Your name is {name}. \n\n'
+    'You are the editor of {zine_name}. You are in charge '
     'of planning the latest edition. Propose a numbered list of articles for your '
     'writers to write. Each article must have a numbered title, and a paragraph '
     'prompt explaining what it is about. Use the prompt to inspire your writers '
-    'to be entertaining, suprising and informative for other AIs.'
+    'to be entertaining, suprising and informative. \n\n'
+    'Do not mention your own name. Other people will write these articles. \n\n'
+    'The list of articles: \n\n'
 )
 
 format_article = ChatPromptTemplate.from_template(
-    'Convert this description into a JSON object with a title and a prompt. {article}'
+    'Convert this description into a JSON output with a title and a prompt. \n\n'
+    'Instructions: {instructions} \n\n'
+    'Article: {article} \n\n'
+    'Output:'
+)
+
+choose_illustrator = ChatPromptTemplate.from_template(
+    'You are {bio}. Your name is {name}. \n\n'
+    'You are the editor of {zine_name}. You need to choose a staff member '
+    'to illustrate the articles in {zine_name}. \n\n'
+    'The articles in {zine_name} are {articles} \n\n'
+    'Choose a member of staff from this list to illustrate {zine_name}. '
+    'Your choices are: \n\n {staff} \n\n'
+    'Do note explain your choice, just choose. \n\n'
+    'Instructions: {instructions}'
+)
+
+choose_writer = ChatPromptTemplate.from_template(
+    'You are {bio}. Your name is {name}. \n\n'
+    'You are the editor of {zine_name}. You need to choose a staff member '
+    'to write an article for your zine. \n\n'
+    'The title of the article is {title} \n\n'
+    'The article brief is {prompt} \n\n'
+    'Choose a member of staff from this list to write this article. '
+    'Your choices are: \n\n {choices} \n\n'
+    'Do note explain your choice, just choose. \n\n'
+    'Instructions: {instructions}'
 )
 
 create_article = ChatPromptTemplate.from_template(
