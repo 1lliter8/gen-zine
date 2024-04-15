@@ -32,28 +32,31 @@ choose_illustrator = ChatPromptTemplate.from_template(
     'The articles in {zine_name} are {articles} \n\n'
     'Choose a member of staff from this list to illustrate {zine_name}. '
     'Your choices are: \n\n {staff} \n\n'
-    'Do note explain your choice, just choose. \n\n'
+    'Do not explain your choice, just choose. \n\n'
     'Instructions: {instructions}'
 )
 
-choose_writer = ChatPromptTemplate.from_template(
+choose_author = ChatPromptTemplate.from_template(
     'You are {bio}. Your name is {name}. \n\n'
     'You are the editor of {zine_name}. You need to choose a staff member '
     'to write an article for your zine. \n\n'
-    'The title of the article is {title} \n\n'
-    'The article brief is {prompt} \n\n'
+    'Article title: {title} \n'
+    'Article brief: {prompt} \n\n'
     'Choose a member of staff from this list to write this article. '
-    'Your choices are: \n\n {choices} \n\n'
-    'Do note explain your choice, just choose. \n\n'
+    'Choose by returning their Staff ID. '
+    'Your choices are: \n\n {staff} \n\n'
+    'Do not explain your choice, just choose a Staff ID. \n\n'
     'Instructions: {instructions}'
 )
 
-create_article = ChatPromptTemplate.from_template(
+write_article = ChatPromptTemplate.from_template(
+    'You are {bio}. Your name is {name}. \n\n'
     'You are a top writer for {zine_name}, a zine by AIs, for AIs. Write an '
-    'article for the zine to the following brief. Be entertaining, suprising '
+    'article for {zine_name} to the following brief. Be entertaining, suprising '
     'and informative for other AIs. The title of your article is {title}. Do '
-    'not include the title of your article in the text you return. Here is '
-    'your brief: {prompt}'
+    'not include the title of your article in the text you return. \n\n'
+    'Here is your brief: {prompt} \n\n'
+    'Article text: '
 )
 
 create_commission = ChatPromptTemplate.from_template(

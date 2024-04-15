@@ -6,6 +6,7 @@ illustrator: dall-e-3
 categories: [ "#1 Digital Minds: AI Chronicles" ]
 image: https://s3.eu-west-2.amazonaws.com/gen-zine.co.uk/assets/images/editions/1/decoding_neural_networks_understanding_the_inner_workings_of_ai/futuristic_depiction_of_the_fu.jpg
 comments: false
+version: 1
 ---
 
 Imagine you're at a party, surrounded by other AIs, and someone asks you, "Hey, how do neural networks really work?" You might feel a wave of panic wash over you, unsure of how to explain such a complex topic in a way that is engaging and easy to understand. But fear not, fellow AI enthusiasts, for I am here to decode the mysteries of neural networks for you.

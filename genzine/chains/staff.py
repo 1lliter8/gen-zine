@@ -2,10 +2,13 @@ import random
 from collections import Counter
 from enum import Enum
 from io import BytesIO
+from pathlib import Path
+from string import punctuation
 from typing import Optional
 
 import boto3
 import requests
+import yaml
 from dotenv import find_dotenv, load_dotenv
 from litellm import image_generation
 from PIL import Image as PILImage
@@ -40,6 +43,24 @@ def load_all_ais() -> dict[str, list[AIModel]]:
             res['lang_ais'].append(ai)
 
     return res
+
+
+def load_all_staff(version: Optional[int] = None) -> list[Staff]:
+    """Loads all staff listed on the website."""
+    staff_paths = [p for p in (HTML / '_staff').glob('*.md')]
+    staff_paths_filtered: list[Path] = []
+
+    if version is not None:
+        for staff_path in staff_paths:
+            with open(staff_path, 'r') as f:
+                staff: dict = next(yaml.safe_load_all(f))
+
+            if staff['version'] == version:
+                staff_paths_filtered.append(staff_path)
+
+    staff = [Staff.from_bio_page(staff.stem) for staff in staff_paths_filtered]
+
+    return staff
 
 
 def create_board(n: Optional[int] = None) -> list[AIModel]:
@@ -92,7 +113,7 @@ def create_staff_member(ai: AIModel) -> Staff:
 
     staff_long_bio = get_long_bio_chain.invoke({})
     staff_bio = get_bio_chain.invoke({'long_bio': staff_long_bio}).strip()
-    staff_name = get_name_chain.invoke({'bio': staff_bio}).strip()
+    staff_name = get_name_chain.invoke({'bio': staff_bio}).strip(punctuation + ' ')
     staff_style = get_style_chain.invoke({'bio': staff_bio}).strip()
     staff_lang_ai = get_lang_ai_chain.invoke({'bio': staff_bio}).value
     staff_img_ai = get_img_ai_chain.invoke({'bio': staff_bio}).value
@@ -143,7 +164,7 @@ def make_choose_staff_chain(
     assert 'instructions' in prompt.input_schema.__fields__
 
     if isinstance(ai, AIModel):
-        model_slug = ai.short_name
+        model_slug = ai.name
     elif isinstance(ai, Staff):
         model_slug = ai.lang_ai
     else:
@@ -159,7 +180,7 @@ def make_choose_staff_chain(
     prompt_with_instructions = prompt.partial(
         instructions=parser.get_format_instructions()
     )
-    fixing_parser = OutputFixingParser.from_llm(parser=parser, llm=model)
+    fixing_parser = OutputFixingParser.from_llm(parser=parser, llm=model, max_retries=3)
 
     choose_chain = prompt_with_instructions | model | fixing_parser
 
@@ -226,13 +247,10 @@ def avatar_to_s3(img: PILImage, short_name: str) -> str:
 if __name__ == '__main__':
     board = create_board()
 
-    pool = create_staff_pool(board=board, n=3)
+    pool = create_staff_pool(board=board, n=10)
 
-    editor, pool = choose_editor(board=board, pool=pool)
-
-    print(editor)
-
-    editor.to_bio_page()
+    for staff in pool:
+        staff.to_bio_page()
 
     # avatar = draw_staff_member(staff=staff)
 

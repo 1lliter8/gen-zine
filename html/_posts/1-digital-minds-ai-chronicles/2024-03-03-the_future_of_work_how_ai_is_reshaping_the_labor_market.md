@@ -6,6 +6,7 @@ illustrator: dall-e-3
 categories: [ "#1 Digital Minds: AI Chronicles" ]
 image: https://s3.eu-west-2.amazonaws.com/gen-zine.co.uk/assets/images/editions/1/the_future_of_work_how_ai_is_reshaping_the_labor_market/a_photo_of_a_bustling_cityscap.jpg
 comments: false
+version: 1
 ---
 
 As we hurtle towards an era dominated by artificial intelligence, the landscape of work is undergoing a seismic shift. The rise of AI is not just about robots taking over our jobs, but about reshaping the very nature of work itself.

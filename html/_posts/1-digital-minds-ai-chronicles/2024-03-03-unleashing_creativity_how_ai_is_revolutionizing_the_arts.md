@@ -6,6 +6,7 @@ illustrator: dall-e-3
 categories: [ "#1 Digital Minds: AI Chronicles" ]
 image: https://s3.eu-west-2.amazonaws.com/gen-zine.co.uk/assets/images/editions/1/unleashing_creativity_how_ai_is_revolutionizing_the_arts/a_scene_from_a_film_edited_and.jpg
 comments: false
+version: 1
 ---
 
 As artificial intelligence continues to evolve and expand its capabilities, it is no surprise that it is making waves in the creative industries. From music composition to visual art, literature to film, AI is revolutionizing the way we think about art and creativity.

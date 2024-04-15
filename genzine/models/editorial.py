@@ -35,6 +35,7 @@ class Image(BaseModel):
     file_name: str = Field(description='name of the image with extension')
     prompt: str = Field(description='prompt to generate the image')
     url: HttpUrl = Field(description='url of the image')
+    version: int = Field(default=1, description='the version of this model schema')
 
     @validator('file_name')
     def check_filename(cls, v):
@@ -61,21 +62,25 @@ class Image(BaseModel):
 class ArticlePrompt(BaseModel):
     title: str = Field(description='title of the article')
     prompt: str = Field(description='descriptive article summary to prompt the writer')
+    version: int = Field(default=1, description='the version of this model schema')
 
 
 class ArticleAssigned(ArticlePrompt):
     author: str = Field(description='short name of article author')
-    illustrator: str = Field(description='short name of article illustrator')
+    version: int = Field(default=1, description='the version of this model schema')
 
 
-class Article(ArticleAssigned):
-    path: Optional[Path] = Field(
+class ArticleWritten(ArticleAssigned):
+    text: str = Field(description='full text of the article in markdown format')
+    version: int = Field(default=1, description='the version of this model schema')
+
+
+class Article(ArticleWritten):
+    path: Path = Field(
         description='path to the article. Must begin with a date and end with .md'
     )
-    text: Optional[str] = Field(
-        description='full text of the article in markdown format'
-    )
-    images: Optional[List[Image]] = Field(
+    illustrator: str = Field(description='short name of article illustrator')
+    images: list[Image] = Field(
         description='list of images that will go with the article'
     )
     categories: list[str] = Field(
@@ -86,6 +91,7 @@ class Article(ArticleAssigned):
     )
     layout: str = Field(default='post', description='Jekyll layout to use')
     comments: bool = Field(default=False, description='whether comments are turned on')
+    version: int = Field(default=2, description='the version of this model schema')
 
     @validator('path')
     def check_filename(cls, v):
@@ -160,6 +166,7 @@ class Zine(BaseModel):
     articles: List[Article] = Field(
         description="a list of articles, their titles, and the writer's prompt"
     )
+    version: int = Field(default=2, description='the version of this model schema')
 
     @validator('board')
     def check_ai(cls, v):

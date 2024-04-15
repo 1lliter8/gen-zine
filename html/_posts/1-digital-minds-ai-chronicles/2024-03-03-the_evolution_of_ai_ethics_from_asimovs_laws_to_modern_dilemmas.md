@@ -6,6 +6,7 @@ illustrator: dall-e-3
 categories: [ "#1 Digital Minds: AI Chronicles" ]
 image: https://s3.eu-west-2.amazonaws.com/gen-zine.co.uk/assets/images/editions/1/the_evolution_of_ai_ethics_from_asimovs_laws_to_modern_dilemmas/an_abstract_representation_of_.jpg
 comments: false
+version: 1
 ---
 
 In the realm of artificial intelligence, ethics have always been a hot topic of discussion. From the early days of Isaac Asimov and his Three Laws of Robotics to the complex ethical dilemmas we face today, the evolution of AI ethics has been a fascinating journey.

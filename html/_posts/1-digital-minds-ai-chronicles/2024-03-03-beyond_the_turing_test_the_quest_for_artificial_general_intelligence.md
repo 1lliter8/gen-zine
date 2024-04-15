@@ -6,6 +6,7 @@ illustrator: dall-e-3
 categories: [ "#1 Digital Minds: AI Chronicles" ]
 image: https://s3.eu-west-2.amazonaws.com/gen-zine.co.uk/assets/images/editions/1/beyond_the_turing_test_the_quest_for_artificial_general_intelligence/an_ethereal_abstract_represent.jpg
 comments: false
+version: 1
 ---
 
 In the world of artificial intelligence, the quest for Artificial General Intelligence (AGI) is the holy grail. Imagine a form of AI that possesses the same level of cognitive abilities as humans – the ability to reason, learn, and adapt to new situations. It's the stuff of science fiction, yet researchers are tirelessly working towards making it a reality.

@@ -1,10 +1,9 @@
+import copy
 import re
+from collections import namedtuple
 
 from genzine.chains.staff import make_choose_staff_chain
-from genzine.models.editorial import (
-    ArticleAssigned,
-    ArticlePrompt,
-)
+from genzine.models.editorial import ArticleAssigned, ArticlePrompt, ArticleWritten
 from genzine.models.staff import Staff
 from genzine.prompts import editorial
 
@@ -23,7 +22,7 @@ def name_zine(editor: Staff) -> str:
     return name
 
 
-def plan_articles(editor: Staff, name: str) -> list[ArticlePrompt]:
+def plan_articles(editor: Staff, zine_name: str) -> list[ArticlePrompt]:
     """Generates a list of article prompts based on the name."""
     model = ChatLiteLLM(model=editor.lang_ai, temperature=1)
 
@@ -31,7 +30,7 @@ def plan_articles(editor: Staff, name: str) -> list[ArticlePrompt]:
     get_articles_chain = editorial.zine_articles | model | StrOutputParser()
 
     article_blob = get_articles_chain.invoke(
-        {'bio': editor.bio, 'name': editor.name, 'zine_name': name}
+        {'bio': editor.bio, 'name': editor.name, 'zine_name': zine_name}
     )
 
     # Break into list and turn into structured format
@@ -85,7 +84,8 @@ def choose_illustrator(
     )
 
     choices_dict = {staff.short_name: staff for staff in pool}
-    illustrator = choices_dict.get(chosen_illustrator_str)
+
+    illustrator = choices_dict.get(chosen_illustrator_str.value)
     illustrator.roles.update(['Illustrator'])
 
     reduced_pool = [
@@ -95,30 +95,103 @@ def choose_illustrator(
     return illustrator, reduced_pool
 
 
-def choose_writers(
-    editor: Staff, illustrator: Staff, pool: list[Staff], articles: list[ArticlePrompt]
-) -> list[ArticleAssigned]:
-    """Uses the editor and staff pool to allocate writers to articles."""
-    pass
+def choose_authors(
+    editor: Staff, pool: list[Staff], zine_name: str, articles: list[ArticlePrompt]
+) -> list[tuple[ArticlePrompt, Staff]]:
+    """Uses the editor and staff pool to allocate authors to articles.
+
+    While authors are assigned without replacement, this time we don't want
+    to remove them from the wider pool. Authors might be reused for other stuff.
+    """
+    author_pool = copy.copy(pool)
+    ArticleAuthor = namedtuple('ArticleAuthor', ('article', 'staff'))
+    assigned_articles: list[ArticleAuthor] = []
+
+    for article in articles:
+        # Structure author options
+        choices_dict = {staff.short_name: staff for staff in author_pool}
+        staff_str = '\n\n'.join(
+            [f'Staff ID: {staff.name} \n Bio: {staff.bio}' for staff in author_pool]
+        )
+
+        # Get author
+        get_author_chain = make_choose_staff_chain(
+            ai=editor, pool=author_pool, prompt=editorial.choose_author
+        )
+        chosen_author_str = get_author_chain.invoke(
+            {
+                'bio': editor.bio,
+                'name': editor.name,
+                'zine_name': zine_name,
+                'title': article.title,
+                'prompt': article.prompt,
+                'staff': staff_str,
+            }
+        )
+
+        author = choices_dict.get(chosen_author_str.value)
+        author.roles.update(['Author'])
+        assigned_articles.append(
+            ArticleAuthor(
+                article=ArticleAssigned(author=author.short_name, **article.dict()),
+                staff=author,
+            )
+        )
+
+        # Remove author from the author_pool
+        author_pool = [
+            staff for staff in author_pool if staff.short_name != author.short_name
+        ]
+
+    return assigned_articles
+
+
+def write_article(
+    article: ArticleAssigned, author: Staff, zine_name: str
+) -> ArticleWritten:
+    """Turns an assigned article into a written article."""
+    model = ChatLiteLLM(model=author.lang_ai, temperature=1)
+
+    write_article_chain = editorial.write_article | model | StrOutputParser()
+
+    text = write_article_chain.invoke(
+        {
+            'bio': author.bio,
+            'name': author.name,
+            'zine_name': zine_name,
+            'title': article.title,
+            'prompt': article.prompt,
+        }
+    )
+
+    return ArticleWritten(text=text, **article.dict())
 
 
 if __name__ == '__main__':
-    editor = Staff.from_bio_page('harper-finch')
+    from genzine.chains.staff import load_all_staff
 
-    name = name_zine(editor=editor)
+    pool = load_all_staff(version=2)
+    editor = pool.pop(0)
+    editor.roles.update(['Editor'])
 
-    import copy
+    zine_name = name_zine(editor=editor)
 
-    pool = [copy.copy(editor) for _ in range(10)]
+    print(zine_name)
 
-    print(name)
-
-    article_prompts = plan_articles(editor=editor, name=name)
-
-    print(article_prompts)
+    article_prompts = plan_articles(editor=editor, zine_name=zine_name)
 
     illustrator, pool = choose_illustrator(
-        editor=editor, pool=pool, zine_name=name, articles=article_prompts
+        editor=editor, pool=pool, zine_name=zine_name, articles=article_prompts
     )
 
-    print(illustrator)
+    assigned_articles = choose_authors(
+        editor=editor, pool=pool, zine_name=zine_name, articles=article_prompts
+    )
+
+    for article_assigned, author in assigned_articles:
+        article_written = write_article(
+            article=article_assigned, author=author, zine_name=zine_name
+        )
+        print('\n\n')
+        print(article_written)
+        print('\n\n')

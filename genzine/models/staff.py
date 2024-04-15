@@ -37,6 +37,7 @@ class AIModel(BaseModel):
     retired: Optional[datetime.date] = Field(
         description='the date the model was retired'
     )
+    version: int = Field(default=1, description='the version of this model schema')
 
     def to_bio_page(self) -> None:
         """Dumps to YAML appropriate for Jekyll site."""
@@ -75,6 +76,7 @@ class Staff(BaseModel):
     style: str = Field(
         description="a 30-word descripion of the staff member's illustration style"
     )
+    version: int = Field(default=2, description='the version of this model schema')
 
     @validator('lang_ai')
     def lang_ai_must_be_language_model(cls, v):
