@@ -7,6 +7,7 @@ from typing import List, Optional
 
 import yaml
 from dateutil.parser import ParserError, parse
+from PIL.Image import Image as PILImage
 from pydantic.v1 import BaseModel, Field, HttpUrl, validator
 
 from genzine.models.staff import AIModel, Staff
@@ -31,10 +32,9 @@ class ImgParser(HTMLParser):
             self.img_alt: str = attrs_dict.get('alt')
 
 
-class Image(BaseModel):
+class ImagePrompt(BaseModel):
     file_name: str = Field(description='name of the image with extension')
     prompt: str = Field(description='prompt to generate the image')
-    url: HttpUrl = Field(description='url of the image')
     version: int = Field(default=1, description='the version of this model schema')
 
     @validator('file_name')
@@ -43,6 +43,19 @@ class Image(BaseModel):
         assert file.suffix.lower() in ('.png', '.jpg', '.jpeg')
         assert len(file.parents) == 1
         return v
+
+
+class ImageRaw(ImagePrompt):
+    raw: PILImage = Field(description='image as a pillow object')
+    version: int = Field(default=1, description='the version of this model schema')
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
+class Image(ImagePrompt):
+    url: HttpUrl = Field(description='url of the image')
+    version: int = Field(default=1, description='the version of this model schema')
 
     def to_html(self):
         return f'<img src="{self.url}" alt="{self.prompt}" />'

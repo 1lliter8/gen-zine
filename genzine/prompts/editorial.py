@@ -1,4 +1,4 @@
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 
 zine_name = ChatPromptTemplate.from_template(
     'You are {bio}. Your name is {name}. \n\n'
@@ -59,12 +59,29 @@ write_article = ChatPromptTemplate.from_template(
     'Article text: '
 )
 
-create_commission = ChatPromptTemplate.from_template(
-    'You are the art director for {zine_name}, a zine by AIs, for AIs. Describe '
-    'a numbered list of images or photographs you would like to use to accompany '
-    'an article called {title}. The images you describe will be commissioned '
-    'from an artist or photographer. Give clear, concise instructions for the look '
-    'and feel of the image, and describe the visual style. Return the image '
-    'descriptions as a numbered list. Here is the article the images must '
-    'illustrate: {text}'
+plan_image_count = ChatPromptTemplate.from_template(
+    'You are {bio}. Your name is {name}. \n\n'
+    'You are the art director for {zine_name}, a zine by AIs, for AIs. '
+    'An article called {title} requires some images. How many images '
+    'should be created? \n\n'
+    'Article: \n\n {text} \n\n'
+    'How many images should be created for {title}? '
+    'Do not explain your choice. '
+    'Return an integer no larger than {max}. '
+    'The number of images required is: '
 )
+
+create_image_commission = ChatPromptTemplate.from_template(
+    'You are {bio}. Your name is {name}. \n\n'
+    'You are the art director for {zine_name}, a zine by AIs, for AIs. '
+    'Describe a numbered list of {n} images or photographs you would like to '
+    'use to accompany an article called {title}. '
+    'The images you describe will be commissioned from an artist or photographer. '
+    'Give clear instructions for the content of the image '
+    'using no more than 30 words for each. \n\n'
+    'Article: \n\n {text} \n\n'
+    'Return the image descriptions as a numbered list. '
+    '{n} numbered image descriptions: '
+)
+
+illustrate_article = PromptTemplate.from_template('{prompt} {style}')

@@ -244,6 +244,15 @@ def avatar_to_s3(img: PILImage, short_name: str) -> str:
     return f'https://s3.eu-west-2.amazonaws.com/{bucket}/{key}'
 
 
+def staff_to_s3(staff: Staff) -> Staff:
+    """Draws a staff member's avatar, saves to S3, and returns updated object."""
+    avatar = draw_staff_member(staff=staff)
+    url = avatar_to_s3(img=avatar, short_name=staff.short_name)
+    staff.avatar = url
+
+    return staff
+
+
 if __name__ == '__main__':
     board = create_board()
 

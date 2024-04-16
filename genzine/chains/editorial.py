@@ -1,11 +1,25 @@
 import copy
 import re
 from collections import namedtuple
+from io import BytesIO
+
+import boto3
+import requests
+from litellm import image_generation
+from PIL import Image as PILImage
 
 from genzine.chains.staff import make_choose_staff_chain
-from genzine.models.editorial import ArticleAssigned, ArticlePrompt, ArticleWritten
+from genzine.models.editorial import (
+    ArticleAssigned,
+    ArticlePrompt,
+    ArticleWritten,
+    Image,
+    ImagePrompt,
+    ImageRaw,
+)
 from genzine.models.staff import Staff
 from genzine.prompts import editorial
+from genzine.utils import to_camelcase
 
 from langchain.output_parsers import OutputFixingParser
 from langchain_community.chat_models import ChatLiteLLM
@@ -167,31 +181,161 @@ def write_article(
     return ArticleWritten(text=text, **article.dict())
 
 
-if __name__ == '__main__':
-    from genzine.chains.staff import load_all_staff
+def commission_article_images(
+    article: ArticleWritten, illustrator: Staff, zine_name: str
+) -> list[ImagePrompt]:
+    """Turns a written article into a list of image prompts."""
+    model = ChatLiteLLM(model=illustrator.lang_ai, temperature=1)
 
-    pool = load_all_staff(version=2)
-    editor = pool.pop(0)
-    editor.roles.update(['Editor'])
+    # Generate image count
+    image_count_chain = editorial.plan_image_count | model | StrOutputParser()
+    para_count = len(article.text.split('\n'))
 
-    zine_name = name_zine(editor=editor)
-
-    print(zine_name)
-
-    article_prompts = plan_articles(editor=editor, zine_name=zine_name)
-
-    illustrator, pool = choose_illustrator(
-        editor=editor, pool=pool, zine_name=zine_name, articles=article_prompts
-    )
-
-    assigned_articles = choose_authors(
-        editor=editor, pool=pool, zine_name=zine_name, articles=article_prompts
-    )
-
-    for article_assigned, author in assigned_articles:
-        article_written = write_article(
-            article=article_assigned, author=author, zine_name=zine_name
+    image_count: int = int(
+        image_count_chain.invoke(
+            {
+                'bio': illustrator.bio,
+                'name': illustrator.name,
+                'zine_name': zine_name,
+                'title': article.title,
+                'text': article.text,
+                'max': para_count,
+            }
         )
-        print('\n\n')
-        print(article_written)
-        print('\n\n')
+    )
+
+    # Generate the prompts
+    image_comission_chain = (
+        editorial.create_image_commission | model | StrOutputParser()
+    )
+
+    image_blob = image_comission_chain.invoke(
+        {
+            'bio': illustrator.bio,
+            'name': illustrator.name,
+            'zine_name': zine_name,
+            'title': article.title,
+            'text': article.text,
+            'n': image_count,
+        }
+    )
+
+    image_prompt_list = re.split(r'\d. ', image_blob, flags=0)
+    image_prompt_list = [
+        img.strip() for img in image_prompt_list if len(img.strip()) > 0
+    ]
+
+    image_list: list[ImagePrompt] = []
+
+    for prompt in image_prompt_list:
+        image_name = to_camelcase(prompt)[:30] + '.jpg'
+        image_list.append(ImagePrompt(file_name=image_name, prompt=prompt))
+
+    return image_list
+
+
+def draw_prompt(image: ImagePrompt, illustrator: Staff) -> ImageRaw:
+    """Uses an illustrator to draw a prompt."""
+    gen_response = image_generation(
+        prompt=editorial.illustrate_article.format(
+            prompt=image.prompt, style=illustrator.style
+        ),
+        model=illustrator.img_ai,
+        size='1024x1024',
+    )
+    img_response = requests.get(gen_response.data[0]['url'])
+
+    img = PILImage.open(BytesIO(img_response.content))
+    rgb_img = img.convert('RGB')
+
+    return ImageRaw(raw=rgb_img, **image.dict())
+
+
+def illustrate_article(
+    article: ArticleWritten, illustrator: Staff, zine_name: str
+) -> list[ImageRaw]:
+    """Turns a written article into a list of generated images."""
+    comissioned_images: list[ImagePrompt] = commission_article_images(
+        article=article, illustrator=illustrator, zine_name=zine_name
+    )
+    generated_images: list[ImageRaw] = [
+        draw_prompt(image=image, illustrator=illustrator)
+        for image in comissioned_images
+    ]
+    return generated_images
+
+
+def image_to_s3(image: ImageRaw, zine_edition: int) -> Image:
+    """Saves article image to S3 and returns the completed image object."""
+    s3 = boto3.client('s3')
+
+    f = BytesIO()
+    image.raw.save(f, format='jpeg', quality=95, optimize=True)
+    f.seek(0)
+
+    bucket: str = 'gen-zine.co.uk'
+    key: str = f'assets/images/editions/{zine_edition}/{image.file_name}'
+
+    s3.upload_fileobj(Fileobj=f, Bucket=bucket, Key=key)
+
+    return Image(
+        file_name=image.file_name,
+        prompt=image.prompt,
+        url=f'https://s3.eu-west-2.amazonaws.com/{bucket}/{key}',
+    )
+
+
+if __name__ == '__main__':
+    # from genzine.chains.staff import load_all_staff
+    # from genzine.utils import HTML
+
+    # pool = load_all_staff(version=2)
+    # editor = pool.pop(0)
+    # editor.roles.update(['Editor'])
+
+    # zine_name = name_zine(editor=editor)
+
+    # print(zine_name)
+    # print('\n')
+
+    # article_prompts = plan_articles(editor=editor, zine_name=zine_name)
+
+    # illustrator, pool = choose_illustrator(
+    #     editor=editor, pool=pool, zine_name=zine_name, articles=article_prompts
+    # )
+
+    # assigned_articles = choose_authors(
+    #     editor=editor, pool=pool, zine_name=zine_name, articles=article_prompts
+    # )
+
+    # for article_assigned, author in assigned_articles:
+    #     article_written = write_article(
+    #         article=article_assigned, author=author, zine_name=zine_name
+    #     )
+    #     print(article_written)
+    #     print('\n\n')
+
+    # article_assigned, author = assigned_articles[0]
+
+    # article_written = write_article(
+    #     article=article_assigned, author=author, zine_name=zine_name
+    # )
+
+    # print(article_written)
+    # print('\n')
+
+    # comissioned_images = commission_article_images(
+    #     article=article_written, illustrator=illustrator, zine_name=zine_name
+    # )
+
+    # print(comissioned_images)
+    # print('\n')
+
+    # image = draw_prompt(image=comissioned_images[0], illustrator=illustrator)
+
+    # image.raw.save(
+    #     HTML / f'assets/images/{image.file_name}',
+    #     quality=95,
+    #     optimize=True
+    # )
+    pass

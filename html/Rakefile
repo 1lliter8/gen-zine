@@ -21,3 +21,8 @@ task test: [:build] do
     }
     HTMLProofer.check_directory("./_site", options).run
 end
+
+desc 'Serve the site'
+task serve: [:build] do
+    Jekyll::Commands::Serve.process({})
+end
