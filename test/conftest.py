@@ -61,6 +61,7 @@ def ai_factory(genzine_fs) -> Callable:
 
         return AIModel(
             short_name=slugify(name),
+            prefix=fake.word(),
             name=name,
             site=fake.url(),
             ai_type=ai_type,

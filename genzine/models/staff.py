@@ -1,5 +1,6 @@
 import datetime
 import json
+import re
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -25,6 +26,16 @@ class AIModel(BaseModel):
     short_name: str = Field(
         description="the model's slugified name, appropriate for LiteLLM"
     )
+    prefix: str = Field(
+        default='',
+        description=(
+            'the model prefix, typically used by LiteLLm for different AI ' 'providers'
+        ),
+    )
+    lite_llm: Optional[str] = Field(
+        default=None,
+        description='identified for LiteLLM. Composite of prefix/short_name',
+    )
     name: str = Field(description="the model's name")
     site: HttpUrl = Field(description="URL of the model's site")
     ai_type: ModelTypeEnum = Field(description='the type of this model')
@@ -38,6 +49,13 @@ class AIModel(BaseModel):
         description='the date the model was retired'
     )
     version: int = Field(default=1, description='the version of this model schema')
+
+    @validator('lite_llm', always=True)
+    def composite_name(cls, v, values, **kwargs):
+        if values['prefix'] == '':
+            return f"{values['short_name']}"
+        else:
+            return f"{values['prefix']}/{values['short_name']}"
 
     def to_bio_page(self) -> None:
         """Dumps to YAML appropriate for Jekyll site."""
@@ -67,10 +85,12 @@ class Staff(BaseModel):
         default=None, description="URL of the staff member's avatar"
     )
     lang_ai: str = Field(
-        description='the short name of the language model that plays this staff member'
+        description=(
+            'the lite_llm name of the language model that plays this ' 'staff member'
+        )
     )
     img_ai: str = Field(
-        description='the short name of the image model that plays this staff member'
+        description='the lite_llm name of the image model that plays this staff member'
     )
     bio: str = Field(description='a 30-word bio of the staff member')
     style: str = Field(
@@ -80,14 +100,16 @@ class Staff(BaseModel):
 
     @validator('lang_ai')
     def lang_ai_must_be_language_model(cls, v):
-        model = AIModel.from_bio_page(short_name=v)
+        short_name = re.search(r'[^/]*$', v)[0]
+        model = AIModel.from_bio_page(short_name=short_name)
         if model.ai_type != 'Language':
             raise ValueError('lang_ai must be a language model')
         return v
 
     @validator('img_ai')
     def img_ai_must_be_language_model(cls, v):
-        model = AIModel.from_bio_page(short_name=v)
+        short_name = re.search(r'[^/]*$', v)[0]
+        model = AIModel.from_bio_page(short_name=short_name)
         if model.ai_type != 'Image':
             raise ValueError('img_ai must be an image model')
         return v

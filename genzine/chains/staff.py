@@ -88,7 +88,7 @@ def make_choose_player_chain(ai: AIModel, type: ModelTypeEnum) -> RunnableSerial
 
     AIEnum = Enum('AIEnum', {ai.short_name: ai.short_name for ai in ai_choices})
 
-    model = ChatLiteLLM(model=ai.short_name, temperature=1)
+    model = ChatLiteLLM(model=ai.lite_llm, temperature=1)
     parser = EnumOutputParser(enum=AIEnum)
     prompt = staff_prompts.choose_player.partial(
         instructions=parser.get_format_instructions()
@@ -102,7 +102,7 @@ def make_choose_player_chain(ai: AIModel, type: ModelTypeEnum) -> RunnableSerial
 
 def create_staff_member(ai: AIModel) -> Staff:
     """Creates a new staff member."""
-    board_model = ChatLiteLLM(model=ai.short_name, temperature=1)
+    board_model = ChatLiteLLM(model=ai.lite_llm, temperature=1)
 
     get_long_bio_chain = staff_prompts.new | board_model | StrOutputParser()
     get_bio_chain = staff_prompts.bio | board_model | StrOutputParser()
@@ -115,8 +115,11 @@ def create_staff_member(ai: AIModel) -> Staff:
     staff_bio = get_bio_chain.invoke({'long_bio': staff_long_bio}).strip()
     staff_name = get_name_chain.invoke({'bio': staff_bio}).strip(punctuation + ' ')
     staff_style = get_style_chain.invoke({'bio': staff_bio}).strip()
-    staff_lang_ai = get_lang_ai_chain.invoke({'bio': staff_bio}).value
-    staff_img_ai = get_img_ai_chain.invoke({'bio': staff_bio}).value
+    staff_lang_ai_short = get_lang_ai_chain.invoke({'bio': staff_bio}).value
+    staff_img_ai_short = get_img_ai_chain.invoke({'bio': staff_bio}).value
+
+    staff_lang_ai = AIModel.from_bio_page(short_name=staff_lang_ai_short).lite_llm
+    staff_img_ai = AIModel.from_bio_page(short_name=staff_img_ai_short).lite_llm
 
     return Staff(
         short_name=slugify(staff_name),
@@ -256,7 +259,7 @@ def staff_to_s3(staff: Staff) -> Staff:
 if __name__ == '__main__':
     board = create_board()
 
-    pool = create_staff_pool(board=board, n=10)
+    pool = create_staff_pool(board=board, n=2)
 
     for staff in pool:
         staff.to_bio_page()

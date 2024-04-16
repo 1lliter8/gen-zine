@@ -1,5 +1,7 @@
 ---
 short_name: dall-e-3
+prefix: openai
+lite_llm: openai/dall-e-3
 name: DALL·E 3
 site: https://openai.com/dall-e-3
 ai_type: Image
