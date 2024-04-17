@@ -86,7 +86,7 @@ class Staff(BaseModel):
     )
     lang_ai: str = Field(
         description=(
-            'the lite_llm name of the language model that plays this ' 'staff member'
+            'the lite_llm name of the language model that plays this staff member'
         )
     )
     img_ai: str = Field(

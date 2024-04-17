@@ -71,7 +71,11 @@ def create_board(n: Optional[int] = None) -> list[AIModel]:
     return random.sample(population=lang_ais, k=k)
 
 
-def make_choose_player_chain(ai: AIModel, type: ModelTypeEnum) -> RunnableSerializable:
+def make_choose_player_chain(
+    ai: AIModel,
+    type: ModelTypeEnum,
+    corrector: Optional[AIModel] = AIModel.from_bio_page('gpt-3.5-turbo'),
+) -> RunnableSerializable:
     """Returns a LanChain chain that chooses an AI to play a staff member.
 
     Uses the specified model to fix the output to conform to a custom enum of AI by
@@ -88,12 +92,16 @@ def make_choose_player_chain(ai: AIModel, type: ModelTypeEnum) -> RunnableSerial
 
     AIEnum = Enum('AIEnum', {ai.short_name: ai.short_name for ai in ai_choices})
 
-    model = ChatLiteLLM(model=ai.lite_llm, temperature=1)
+    model = model_corrector = ChatLiteLLM(model=ai.lite_llm, temperature=1)
+
+    if corrector is not None:
+        model_corrector = ChatLiteLLM(model=corrector.lite_llm, temperature=1)
+
     parser = EnumOutputParser(enum=AIEnum)
     prompt = staff_prompts.choose_player.partial(
         instructions=parser.get_format_instructions()
     )
-    fixing_parser = OutputFixingParser.from_llm(parser=parser, llm=model)
+    fixing_parser = OutputFixingParser.from_llm(parser=parser, llm=model_corrector)
 
     choose_player_chain = prompt | model | fixing_parser
 
@@ -156,24 +164,31 @@ def draw_staff_member(staff: Staff) -> PILImage:
 
 
 def make_choose_staff_chain(
-    ai: AIModel | Staff, pool: list[Staff], prompt: ChatPromptTemplate
+    ai: AIModel | Staff,
+    pool: list[Staff],
+    prompt: ChatPromptTemplate,
+    corrector: Optional[AIModel] = AIModel.from_bio_page('gpt-3.5-turbo'),
 ) -> RunnableSerializable:
     """Returns a LanChain chain that chooses a member of staff for a job.
 
-    Uses the specified model to fix the output to conform to a custom enum of Staff.
+    Uses either the orginal model or an optional corrector to fix the output
+    to conform to a custom enum of Staff.
 
     The supplied prompt template must contain a variable for instructions.
     """
     assert 'instructions' in prompt.input_schema.__fields__
 
     if isinstance(ai, AIModel):
-        model_slug = ai.name
+        model_slug = ai.lite_llm
     elif isinstance(ai, Staff):
         model_slug = ai.lang_ai
     else:
         ValueError('ai must be object of class AIModel or Staff')
 
-    model = ChatLiteLLM(model=model_slug, temperature=1)
+    model = model_corrector = ChatLiteLLM(model=model_slug, temperature=1)
+
+    if corrector is not None:
+        model_corrector = ChatLiteLLM(model=corrector.lite_llm, temperature=1)
 
     StaffEnum = Enum(
         'StaffEnum', {staff.short_name: staff.short_name for staff in pool}
@@ -183,7 +198,9 @@ def make_choose_staff_chain(
     prompt_with_instructions = prompt.partial(
         instructions=parser.get_format_instructions()
     )
-    fixing_parser = OutputFixingParser.from_llm(parser=parser, llm=model, max_retries=3)
+    fixing_parser = OutputFixingParser.from_llm(
+        parser=parser, llm=model_corrector, max_retries=3
+    )
 
     choose_chain = prompt_with_instructions | model | fixing_parser
 
@@ -195,6 +212,7 @@ def choose_editor(
     pool: list[Staff],
     counter: Counter = Counter(),
     max_votes: int = 10,
+    corrector: Optional[AIModel] = AIModel.from_bio_page('gpt-3.5-turbo'),
 ) -> tuple[Staff, list[Staff]]:
     """Uses the board and staff pool to choose an editor.
 
@@ -209,7 +227,7 @@ def choose_editor(
 
     for ai in board:
         choose_editor_chain = make_choose_staff_chain(
-            ai=ai, pool=pool, prompt=staff_prompts.choose_editor
+            ai=ai, pool=pool, prompt=staff_prompts.choose_editor, corrector=corrector
         )
         editor_str = choose_editor_chain.invoke({'choices': choices_str}).value
         counter.update([editor_str])
@@ -257,12 +275,25 @@ def staff_to_s3(staff: Staff) -> Staff:
 
 
 if __name__ == '__main__':
-    board = create_board()
+    # ai = AIModel.from_bio_page('open-mistral-7b')
+    # model = ChatLiteLLM(model=ai.lite_llm, temperature=1)
 
-    pool = create_staff_pool(board=board, n=2)
+    # prompt = ChatPromptTemplate.from_template(
+    #     'Tell me the punchline to this joke. \n\n Joke: {joke} \n\n Punchline: '
+    # )
 
-    for staff in pool:
-        staff.to_bio_page()
+    # chain = staff_prompts.new | model | StrOutputParser()
+
+    # out = chain.invoke({})
+
+    # print(out)
+
+    # board = create_board()
+
+    # pool = create_staff_pool(board=board, n=10)
+
+    # for staff in pool:
+    #     staff.to_bio_page()
 
     # avatar = draw_staff_member(staff=staff)
 
@@ -275,3 +306,4 @@ if __name__ == '__main__':
     # print(url)
 
     # staff.avatar = url
+    pass

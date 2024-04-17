@@ -2,6 +2,7 @@ import copy
 import re
 from collections import namedtuple
 from io import BytesIO
+from typing import Optional
 
 import boto3
 import requests
@@ -17,7 +18,7 @@ from genzine.models.editorial import (
     ImagePrompt,
     ImageRaw,
 )
-from genzine.models.staff import Staff
+from genzine.models.staff import AIModel, Staff
 from genzine.prompts import editorial
 from genzine.utils import to_camelcase
 
@@ -69,7 +70,11 @@ def plan_articles(editor: Staff, zine_name: str) -> list[ArticlePrompt]:
 
 
 def choose_illustrator(
-    editor: Staff, pool: list[Staff], zine_name: str, articles: list[ArticlePrompt]
+    editor: Staff,
+    pool: list[Staff],
+    zine_name: str,
+    articles: list[ArticlePrompt],
+    corrector: Optional[AIModel] = AIModel.from_bio_page('gpt-3.5-turbo'),
 ) -> tuple[Staff, list[Staff]]:
     """Uses the editor, zine name, articles and staff pool to choose an ilustrator.
 
@@ -77,7 +82,7 @@ def choose_illustrator(
     removed.
     """
     get_illustrator_chain = make_choose_staff_chain(
-        ai=editor, pool=pool, prompt=editorial.choose_illustrator
+        ai=editor, pool=pool, prompt=editorial.choose_illustrator, corrector=corrector
     )
 
     articles_str = '\n\n'.join(
@@ -110,7 +115,11 @@ def choose_illustrator(
 
 
 def choose_authors(
-    editor: Staff, pool: list[Staff], zine_name: str, articles: list[ArticlePrompt]
+    editor: Staff,
+    pool: list[Staff],
+    zine_name: str,
+    articles: list[ArticlePrompt],
+    corrector: Optional[AIModel] = AIModel.from_bio_page('gpt-3.5-turbo'),
 ) -> list[tuple[ArticlePrompt, Staff]]:
     """Uses the editor and staff pool to allocate authors to articles.
 
@@ -130,7 +139,10 @@ def choose_authors(
 
         # Get author
         get_author_chain = make_choose_staff_chain(
-            ai=editor, pool=author_pool, prompt=editorial.choose_author
+            ai=editor,
+            pool=author_pool,
+            prompt=editorial.choose_author,
+            corrector=corrector,
         )
         chosen_author_str = get_author_chain.invoke(
             {
@@ -286,50 +298,49 @@ def image_to_s3(image: ImageRaw, zine_edition: int) -> Image:
 
 
 if __name__ == '__main__':
-    # from genzine.chains.staff import load_all_staff
-    # from genzine.utils import HTML
+    from genzine.chains.staff import load_all_staff
 
-    # pool = load_all_staff(version=2)
-    # editor = pool.pop(0)
-    # editor.roles.update(['Editor'])
+    pool = load_all_staff(version=2)
+    editor = pool.pop(0)
+    editor.roles.update(['Editor'])
 
-    # zine_name = name_zine(editor=editor)
+    zine_name = name_zine(editor=editor)
 
-    # print(zine_name)
-    # print('\n')
+    print(zine_name)
+    print('\n')
 
-    # article_prompts = plan_articles(editor=editor, zine_name=zine_name)
+    article_prompts = plan_articles(editor=editor, zine_name=zine_name)
 
-    # illustrator, pool = choose_illustrator(
-    #     editor=editor, pool=pool, zine_name=zine_name, articles=article_prompts
-    # )
+    illustrator, pool = choose_illustrator(
+        editor=editor, pool=pool, zine_name=zine_name, articles=article_prompts
+    )
 
-    # assigned_articles = choose_authors(
-    #     editor=editor, pool=pool, zine_name=zine_name, articles=article_prompts
-    # )
+    assigned_articles = choose_authors(
+        editor=editor, pool=pool, zine_name=zine_name, articles=article_prompts
+    )
 
-    # for article_assigned, author in assigned_articles:
-    #     article_written = write_article(
-    #         article=article_assigned, author=author, zine_name=zine_name
-    #     )
-    #     print(article_written)
-    #     print('\n\n')
+    for article_assigned, author in assigned_articles:
+        article_written = write_article(
+            article=article_assigned, author=author, zine_name=zine_name
+        )
+        print(article_written)
+        print('\n\n')
 
-    # article_assigned, author = assigned_articles[0]
+    article_assigned, author = assigned_articles[0]
 
-    # article_written = write_article(
-    #     article=article_assigned, author=author, zine_name=zine_name
-    # )
+    article_written = write_article(
+        article=article_assigned, author=author, zine_name=zine_name
+    )
 
-    # print(article_written)
-    # print('\n')
+    print(article_written)
+    print('\n')
 
-    # comissioned_images = commission_article_images(
-    #     article=article_written, illustrator=illustrator, zine_name=zine_name
-    # )
+    comissioned_images = commission_article_images(
+        article=article_written, illustrator=illustrator, zine_name=zine_name
+    )
 
-    # print(comissioned_images)
-    # print('\n')
+    print(comissioned_images)
+    print('\n')
 
     # image = draw_prompt(image=comissioned_images[0], illustrator=illustrator)
 
@@ -338,4 +349,4 @@ if __name__ == '__main__':
     #     quality=95,
     #     optimize=True
     # )
-    pass
+    # pass

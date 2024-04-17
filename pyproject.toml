@@ -93,3 +93,9 @@ quote-style = "single"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    # LiteLLM bug: https://github.com/BerriAI/litellm/issues/2832
+    "ignore::DeprecationWarning"
+]
