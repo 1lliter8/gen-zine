@@ -1,6 +1,8 @@
 import io
+import logging
 import re
 import string
+import time
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -11,6 +13,24 @@ GENZINE = ROOT / 'genzine'
 HTML = ROOT / 'html'
 
 
+def get_logger() -> logging.Logger:
+    logger = logging.getLogger('gen-zine')
+    logger.setLevel(logging.INFO)
+
+    formatter = logging.Formatter(
+        '[%(asctime)s | %(name)s | %(levelname)s] %(message)s'
+    )
+    formatter.converter = time.gmtime
+
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+
+    return logger
+
+
 def to_camelcase(text: str) -> str:
     text = text.translate(str.maketrans('', '', string.punctuation))
     text = re.sub(' ', '_', text).lower()
@@ -19,6 +39,10 @@ def to_camelcase(text: str) -> str:
 
 def slugify(text: str) -> str:
     return re.sub(r'[\W_]+', '-', text.lower())
+
+
+def strip_and_title(text: str) -> str:
+    return text.strip(string.punctuation + ' \n').title()
 
 
 def h1(text: str) -> str:

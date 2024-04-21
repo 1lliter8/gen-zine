@@ -9,6 +9,7 @@ import requests
 from litellm import image_generation
 from PIL import Image as PILImage
 
+from genzine.chains.parsers import IntOutputParser, LenOutputParser
 from genzine.chains.staff import make_choose_staff_chain
 from genzine.models.editorial import (
     ArticleAssigned,
@@ -20,7 +21,7 @@ from genzine.models.editorial import (
 )
 from genzine.models.staff import AIModel, Staff
 from genzine.prompts import editorial
-from genzine.utils import to_camelcase
+from genzine.utils import strip_and_title, to_camelcase
 
 from langchain.output_parsers import OutputFixingParser
 from langchain_community.chat_models import ChatLiteLLM
@@ -30,16 +31,28 @@ from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 def name_zine(editor: Staff) -> str:
     """Generates a name for the zine."""
     model = ChatLiteLLM(model=editor.lang_ai, temperature=1)
-    get_name_chain = editorial.zine_name | model | StrOutputParser()
+
+    zine_name_len_parser = LenOutputParser(max_len=100, entity='zine')
+    zine_name_len_retry_parser = OutputFixingParser.from_llm(
+        parser=zine_name_len_parser, llm=model, max_retries=3
+    )
+    get_name_chain = editorial.zine_name | model | zine_name_len_retry_parser
 
     name = get_name_chain.invoke({'name': editor.name, 'bio': editor.bio})
 
     return name
 
 
-def plan_articles(editor: Staff, zine_name: str) -> list[ArticlePrompt]:
+def plan_articles(
+    editor: Staff,
+    zine_name: str,
+    corrector: Optional[AIModel] = AIModel.from_bio_page('gpt-3.5-turbo'),
+) -> list[ArticlePrompt]:
     """Generates a list of article prompts based on the name."""
-    model = ChatLiteLLM(model=editor.lang_ai, temperature=1)
+    model = model_corrector = ChatLiteLLM(model=editor.lang_ai, temperature=1)
+
+    if corrector is not None:
+        model_corrector = ChatLiteLLM(model=corrector.lite_llm, temperature=1)
 
     # Generate articles
     get_articles_chain = editorial.zine_articles | model | StrOutputParser()
@@ -52,7 +65,9 @@ def plan_articles(editor: Staff, zine_name: str) -> list[ArticlePrompt]:
     article_blog_list = re.split(r'(?=\n\d)', article_blob, flags=0)
 
     article_parser = JsonOutputParser(pydantic_object=ArticlePrompt)
-    fixing_parser = OutputFixingParser.from_llm(parser=article_parser, llm=model)
+    fixing_parser = OutputFixingParser.from_llm(
+        parser=article_parser, llm=model_corrector, max_retries=3
+    )
 
     article_prompt = editorial.format_article.partial(
         instructions=article_parser.get_format_instructions()
@@ -64,6 +79,7 @@ def plan_articles(editor: Staff, zine_name: str) -> list[ArticlePrompt]:
     for article in article_blog_list:
         article_formatted = format_article_chain.invoke({'article': article})
         article_partial = ArticlePrompt(**article_formatted)
+        article_partial.title = strip_and_title(article_partial.title)
         articles_object_list.append(article_partial)
 
     return articles_object_list
@@ -200,8 +216,12 @@ def commission_article_images(
     model = ChatLiteLLM(model=illustrator.lang_ai, temperature=1)
 
     # Generate image count
-    image_count_chain = editorial.plan_image_count | model | StrOutputParser()
     para_count = len(article.text.split('\n'))
+
+    fixing_parser = OutputFixingParser.from_llm(
+        parser=IntOutputParser(max_int=para_count), llm=model, max_retries=3
+    )
+    image_count_chain = editorial.plan_image_count | model | fixing_parser
 
     image_count: int = int(
         image_count_chain.invoke(
@@ -240,7 +260,7 @@ def commission_article_images(
     image_list: list[ImagePrompt] = []
 
     for prompt in image_prompt_list:
-        image_name = to_camelcase(prompt)[:30] + '.jpg'
+        image_name = to_camelcase(prompt)[:30].strip() + '.jpg'
         image_list.append(ImagePrompt(file_name=image_name, prompt=prompt))
 
     return image_list

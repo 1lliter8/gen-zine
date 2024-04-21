@@ -84,6 +84,7 @@ class Staff(BaseModel):
     avatar: Optional[HttpUrl] = Field(
         default=None, description="URL of the staff member's avatar"
     )
+    board_ai: str = Field(description='the board member that created this staff member')
     lang_ai: str = Field(
         description=(
             'the lite_llm name of the language model that plays this staff member'
@@ -98,12 +99,12 @@ class Staff(BaseModel):
     )
     version: int = Field(default=2, description='the version of this model schema')
 
-    @validator('lang_ai')
+    @validator('lang_ai', 'board_ai')
     def lang_ai_must_be_language_model(cls, v):
         short_name = re.search(r'[^/]*$', v)[0]
         model = AIModel.from_bio_page(short_name=short_name)
         if model.ai_type != 'Language':
-            raise ValueError('lang_ai must be a language model')
+            raise ValueError('lang_ai and board_ai must be a language model')
         return v
 
     @validator('img_ai')

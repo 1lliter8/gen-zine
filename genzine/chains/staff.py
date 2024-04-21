@@ -3,8 +3,7 @@ from collections import Counter
 from enum import Enum
 from io import BytesIO
 from pathlib import Path
-from string import punctuation
-from typing import Optional
+from typing import Callable, Optional
 
 import boto3
 import requests
@@ -13,18 +12,40 @@ from dotenv import find_dotenv, load_dotenv
 from litellm import image_generation
 from PIL import Image as PILImage
 
+from genzine.chains.parsers import (
+    CosineSimilarityOutputParser,
+    LenOutputParser,
+    LongestContinuousSimilarityOutputParser,
+)
 from genzine.models.staff import AIModel, ModelTypeEnum, Staff
 from genzine.prompts import staff as staff_prompts
-from genzine.utils import HTML, slugify
+from genzine.utils import HTML, get_logger, slugify, strip_and_title
 
-from langchain.output_parsers import OutputFixingParser
+from langchain.output_parsers import OutputFixingParser, RetryWithErrorOutputParser
 from langchain.output_parsers.enum import EnumOutputParser
 from langchain_community.chat_models import ChatLiteLLM
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.exceptions import OutputParserException
+from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import (
+    RunnableLambda,
+    RunnableParallel,
+    RunnablePassthrough,
+)
 from langchain_core.runnables.base import RunnableSerializable
 
 load_dotenv(find_dotenv())
+
+LOG = get_logger()
+
+
+def parse_with_prompt(parser: BaseOutputParser) -> Callable:
+    def parse_func(x):
+        return parser.parse_with_prompt(
+            completion=x['completion'], prompt_value=x['prompt_value']
+        )
+
+    return parse_func
 
 
 def load_all_ais() -> dict[str, list[AIModel]]:
@@ -101,27 +122,99 @@ def make_choose_player_chain(
     prompt = staff_prompts.choose_player.partial(
         instructions=parser.get_format_instructions()
     )
-    fixing_parser = OutputFixingParser.from_llm(parser=parser, llm=model_corrector)
+    fixing_parser = OutputFixingParser.from_llm(
+        parser=parser, llm=model_corrector, max_retries=3
+    )
 
     choose_player_chain = prompt | model | fixing_parser
 
     return choose_player_chain
 
 
-def create_staff_member(ai: AIModel) -> Staff:
+def create_staff_name_bio(
+    ai: AIModel,
+    corrector: Optional[AIModel] = AIModel.from_bio_page('gpt-3.5-turbo'),
+    bios: Optional[list[str]] = None,
+    names: Optional[list[str]] = None,
+) -> tuple[str, str]:
+    """Creates the name and bio of a staff member."""
+    board_model = ChatLiteLLM(model=ai.lite_llm, temperature=1)
+    correction_model = ChatLiteLLM(model=corrector.lite_llm, temperature=1)
+
+    if bios is None:
+        bios = ['']
+
+    if names is None:
+        names = ['']
+
+    # Parsers
+
+    staff_bio_parser = CosineSimilarityOutputParser(
+        threshold=0.35, comparisons=bios, entity='person'
+    )
+    staff_bio_retry_parser = RetryWithErrorOutputParser.from_llm(
+        parser=staff_bio_parser, llm=board_model, max_retries=3
+    )
+
+    staff_len_parser = LenOutputParser(max_len=30, entity='name')
+    staff_len_retry_parser = RetryWithErrorOutputParser.from_llm(
+        parser=staff_len_parser, llm=correction_model, max_retries=3
+    )
+
+    staff_name_parser = LongestContinuousSimilarityOutputParser(
+        threshold=0.5, comparisons=names, entity='name'
+    )
+
+    # Chains
+
+    get_long_bio = staff_prompts.new
+    get_short_bio = (
+        {'long_bio': RunnablePassthrough()} | staff_prompts.bio | board_model
+    )
+    get_bio_chain = RunnableParallel(
+        completion=get_long_bio | get_short_bio, prompt_value=staff_prompts.new
+    ) | RunnableLambda(parse_with_prompt(staff_bio_retry_parser))
+
+    get_name = {'bio': RunnablePassthrough()} | staff_prompts.name | board_model
+    get_name_chain = RunnableParallel(
+        completion=get_name, prompt_value=staff_prompts.name
+    ) | RunnableLambda(parse_with_prompt(staff_len_retry_parser))
+
+    get_name_bio_chain = (
+        get_bio_chain
+        | {'bio': RunnablePassthrough()}
+        | RunnableParallel(name=get_name_chain, bio=RunnableLambda(lambda x: x['bio']))
+        | RunnableParallel(
+            name=RunnableLambda(lambda x: staff_name_parser.parse(x['name'])),
+            bio=RunnableLambda(lambda x: x['bio']),
+        )
+    ).with_retry(
+        retry_if_exception_type=(OutputParserException,),
+        stop_after_attempt=3,
+    )
+
+    name_bio = get_name_bio_chain.invoke({})
+
+    return name_bio['name'], name_bio['bio']
+
+
+def create_staff_member(
+    ai: AIModel,
+    corrector: Optional[AIModel] = AIModel.from_bio_page('gpt-3.5-turbo'),
+    bios: Optional[list[str]] = None,
+    names: Optional[list[str]] = None,
+) -> Staff:
     """Creates a new staff member."""
     board_model = ChatLiteLLM(model=ai.lite_llm, temperature=1)
 
-    get_long_bio_chain = staff_prompts.new | board_model | StrOutputParser()
-    get_bio_chain = staff_prompts.bio | board_model | StrOutputParser()
-    get_name_chain = staff_prompts.name | board_model | StrOutputParser()
     get_style_chain = staff_prompts.style | board_model | StrOutputParser()
     get_lang_ai_chain = make_choose_player_chain(ai=ai, type='Language')
     get_img_ai_chain = make_choose_player_chain(ai=ai, type='Image')
 
-    staff_long_bio = get_long_bio_chain.invoke({})
-    staff_bio = get_bio_chain.invoke({'long_bio': staff_long_bio}).strip()
-    staff_name = get_name_chain.invoke({'bio': staff_bio}).strip(punctuation + ' ')
+    staff_name, staff_bio = create_staff_name_bio(
+        ai=ai, corrector=corrector, bios=bios, names=names
+    )
+    staff_name = strip_and_title(staff_name)
     staff_style = get_style_chain.invoke({'bio': staff_bio}).strip()
     staff_lang_ai_short = get_lang_ai_chain.invoke({'bio': staff_bio}).value
     staff_img_ai_short = get_img_ai_chain.invoke({'bio': staff_bio}).value
@@ -132,6 +225,7 @@ def create_staff_member(ai: AIModel) -> Staff:
     return Staff(
         short_name=slugify(staff_name),
         name=staff_name,
+        board_ai=ai.lite_llm,
         lang_ai=staff_lang_ai,
         img_ai=staff_img_ai,
         bio=staff_bio,
@@ -142,8 +236,16 @@ def create_staff_member(ai: AIModel) -> Staff:
 def create_staff_pool(board: list[AIModel], n: int) -> list[Staff]:
     """Uses a random selection of board members to create a staff pool."""
     pool: list[Staff] = []
+    current_staff = load_all_staff(version=2)
+    names = [staff.name for staff in current_staff]
+    bios = [staff.bio for staff in current_staff]
+
     for _ in range(n):
-        pool.append(create_staff_member(ai=random.choice(board)))
+        new_staff = create_staff_member(ai=random.choice(board), names=names, bios=bios)
+        pool.append(new_staff)
+        names.append(new_staff.name)
+        bios.append(new_staff.bio)
+
     return pool
 
 
@@ -199,8 +301,13 @@ def make_choose_staff_chain(
         instructions=parser.get_format_instructions()
     )
     fixing_parser = OutputFixingParser.from_llm(
-        parser=parser, llm=model_corrector, max_retries=3
+        parser=parser, llm=model_corrector, max_retries=5
     )
+
+    # choose_chain = RunnableParallel(
+    #     completion=prompt_with_instructions | model,
+    #     prompt_value=prompt_with_instructions
+    # ) | RunnableLambda(parse_with_prompt(fixing_parser))
 
     choose_chain = prompt_with_instructions | model | fixing_parser
 
@@ -290,10 +397,12 @@ if __name__ == '__main__':
 
     # board = create_board()
 
-    # pool = create_staff_pool(board=board, n=10)
+    board = [AIModel.from_bio_page('open-mistral-7b')]
 
-    # for staff in pool:
-    #     staff.to_bio_page()
+    pool = create_staff_pool(board=board, n=2)
+
+    for staff in pool:
+        staff.to_bio_page()
 
     # avatar = draw_staff_member(staff=staff)
 

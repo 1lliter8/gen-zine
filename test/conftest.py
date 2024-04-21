@@ -79,10 +79,15 @@ def ai_factory(genzine_fs) -> Callable:
 def staff_factory(genzine_fs, ai_factory):
     def _staff_factory(
         roles: Optional[list[RoleEnum]] = None,
+        board_ai: Optional[AIModel] = None,
         lang_ai: Optional[AIModel] = None,
         img_ai: Optional[AIModel] = None,
     ) -> Staff:
         name: str = fake.name()
+
+        if board_ai is None:
+            board_ai: AIModel = ai_factory(ai_type='Language')
+            board_ai.to_bio_page()
 
         if lang_ai is None:
             lang_ai: AIModel = ai_factory(ai_type='Language')
@@ -100,8 +105,9 @@ def staff_factory(genzine_fs, ai_factory):
             name=name,
             roles=roles,
             avatar=f"{fake.url()}{fake.uri_path()}/{fake.file_name(category='image')}",
-            lang_ai=lang_ai.short_name,
-            img_ai=img_ai.short_name,
+            board_ai=board_ai.lite_llm,
+            lang_ai=lang_ai.lite_llm,
+            img_ai=img_ai.lite_llm,
             bio=fake.sentence(nb_words=10),
             style=fake.sentence(nb_words=10),
         )
@@ -188,6 +194,7 @@ def zine_factory(genzine_fs, article_factory, ai_factory, staff_factory):
         staff_list: list[Staff] = [
             staff_factory(
                 roles=['Author', 'Editor', 'Illustrator'],
+                board_ai=random.choice(lang_ais),
                 lang_ai=random.choice(lang_ais),
                 img_ai=random.choice(img_ais),
             )

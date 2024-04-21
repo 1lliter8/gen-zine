@@ -7,7 +7,10 @@ bio = ChatPromptTemplate.from_template(
 )
 
 name = ChatPromptTemplate.from_template(
-    'You are: {bio} \n\n What is your name? Return only your name. My name is:'
+    'You are: {bio} \n\n What is your name? '
+    'Return only your name. '
+    'Do not explain. '
+    'My name is: '
 )
 
 style = ChatPromptTemplate.from_template(
@@ -33,7 +36,9 @@ choose_player = ChatPromptTemplate.from_template(
 
 choose_editor = ChatPromptTemplate.from_template(
     'Choose a member of staff from this list to edit a zine. '
+    'Choose by returning their Staff ID. '
     'Your choices are: \n\n {choices} \n\n'
-    'Do note explain your choice, just choose. \n\n'
-    'Instructions: {instructions}'
+    'Do not explain your choice, just choose a Staff ID. \n\n'
+    'Instructions: {instructions} \n\n'
+    'Staff ID: '
 )

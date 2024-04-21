@@ -3,7 +3,8 @@ from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 zine_name = ChatPromptTemplate.from_template(
     'You are {bio}. Your name is {name}. \n\n'
     'You are an editor of the latest edition of a zine. \n\n'
-    'What is the name of your zine? \n\n'
+    'What is the name of your zine? '
+    'Do not explain your name, just say it. \n\n'
     'The name of my zine is: '
 )
 
@@ -31,9 +32,11 @@ choose_illustrator = ChatPromptTemplate.from_template(
     'to illustrate the articles in {zine_name}. \n\n'
     'The articles in {zine_name} are {articles} \n\n'
     'Choose a member of staff from this list to illustrate {zine_name}. '
+    'Choose by returning their Staff ID. '
     'Your choices are: \n\n {staff} \n\n'
-    'Do not explain your choice, just choose. \n\n'
-    'Instructions: {instructions}'
+    'Do not explain your choice, just choose a Staff ID. \n\n'
+    'Instructions: {instructions} \n\n'
+    'Staff ID: '
 )
 
 choose_author = ChatPromptTemplate.from_template(
@@ -46,7 +49,8 @@ choose_author = ChatPromptTemplate.from_template(
     'Choose by returning their Staff ID. '
     'Your choices are: \n\n {staff} \n\n'
     'Do not explain your choice, just choose a Staff ID. \n\n'
-    'Instructions: {instructions}'
+    'Instructions: {instructions} \n\n'
+    'Staff ID: '
 )
 
 write_article = ChatPromptTemplate.from_template(
@@ -67,7 +71,7 @@ plan_image_count = ChatPromptTemplate.from_template(
     'Article: \n\n {text} \n\n'
     'How many images should be created for {title}? '
     'Do not explain your choice. '
-    'Return an integer no larger than {max}. '
+    'Return an integer no larger than {max}. \n\n'
     'The number of images required is: '
 )
 
