@@ -17,6 +17,7 @@ from genzine.chains.staff import (
     staff_to_s3,
 )
 from genzine.models.editorial import Article, Zine
+from genzine.models.staff import Staff
 from genzine.utils import LOG, slugify
 
 
@@ -59,12 +60,20 @@ def make_zine(edition: int) -> None:
     LOG.info(f'{len(assigned_articles)} articles assigned to writers')
 
     all_articles: list[Article] = []
+    authors: list[Staff] = []
     for article_assigned, author in assigned_articles:
+        authors.append(author)
+
         # Writers write articles
         article_written = write_article(
             article=article_assigned, author=author, zine_name=zine_name
         )
         LOG.info(f'Article written: {article_written.title}')
+
+        article_slug = slugify(article_written.title)
+        article_path = Path(
+            slugify(f'{str(date.today())} {article_written.title}') + '.md'
+        )
 
         # Illustrator creates images
         article_raw_images = illustrate_article(
@@ -77,7 +86,7 @@ def make_zine(edition: int) -> None:
 
         # Save images
         images = [
-            image_to_s3(image=image, zine_edition=edition)
+            image_to_s3(image=image, article_path=article_slug, zine_edition=edition)
             for image in article_raw_images
         ]
         LOG.info(f'Article images saved: {article_written.title}')
@@ -87,7 +96,7 @@ def make_zine(edition: int) -> None:
             k: v for k, v in article_written.dict().items() if k != 'version'
         }
         article = Article(
-            path=Path(slugify(f'{str(date.today())} {zine_name}') + '.md'),
+            path=article_path,
             illustrator=illustrator.short_name,
             images=images,
             categories=categories,
@@ -99,6 +108,17 @@ def make_zine(edition: int) -> None:
         all_articles.append(article)
 
     LOG.info(f'{len(all_articles)} articles completed')
+
+    # Draw editor, illustrator, authors
+    all_staff = [staff_to_s3(staff=staff) for staff in [editor, illustrator] + authors]
+
+    LOG.info(f'{len(all_staff)} staff saved to S3')
+
+    # Save editor, illustrator, authors
+    for staff in all_staff:
+        staff.to_bio_page()
+
+    LOG.info(f'{len(all_staff)} staff bios saved to site')
 
     # Complete zine
     zine = Zine(
@@ -116,17 +136,6 @@ def make_zine(edition: int) -> None:
     zine.to_posts()
 
     LOG.info(f'Zine saved: {zine_name}')
-
-    # Draw editor, illustrator, authors
-    all_staff = [staff_to_s3(staff=staff) for staff in [editor, illustrator] + pool]
-
-    LOG.info(f'{len(all_staff)} staff saved to S3')
-
-    # Save editor, illustrator, authors
-    for staff in all_staff:
-        staff.to_bio_page()
-
-    LOG.info(f'{len(all_staff)} staff bios saved to site')
 
     LOG.info('Zine COMPLETE!')
 

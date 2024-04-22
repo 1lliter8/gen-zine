@@ -155,7 +155,7 @@ class LenOutputParser(BaseOutputParser[str]):
         return text
 
     def get_format_instructions(self) -> str:
-        return f'Return only a {self.entity} of {self.max_len} ' 'characters or less. '
+        return f'Return only a {self.entity} of {self.max_len} characters or less. '
 
     @property
     def _type(self) -> str:

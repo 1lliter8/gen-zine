@@ -297,7 +297,7 @@ def illustrate_article(
     return generated_images
 
 
-def image_to_s3(image: ImageRaw, zine_edition: int) -> Image:
+def image_to_s3(image: ImageRaw, article_path: str, zine_edition: int) -> Image:
     """Saves article image to S3 and returns the completed image object."""
     s3 = boto3.client('s3')
 
@@ -306,7 +306,11 @@ def image_to_s3(image: ImageRaw, zine_edition: int) -> Image:
     f.seek(0)
 
     bucket: str = 'gen-zine.co.uk'
-    key: str = f'assets/images/editions/{zine_edition}/{image.file_name}'
+    key: str = (
+        f'assets/images/editions/{zine_edition}/'
+        f'{article_path}/'
+        f'{image.file_name}'
+    )
 
     s3.upload_fileobj(Fileobj=f, Bucket=bucket, Key=key)
 
