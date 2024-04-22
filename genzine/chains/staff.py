@@ -16,10 +16,11 @@ from genzine.chains.parsers import (
     CosineSimilarityOutputParser,
     LenOutputParser,
     LongestContinuousSimilarityOutputParser,
+    strip_and_lower_parser,
 )
 from genzine.models.staff import AIModel, ModelTypeEnum, Staff
 from genzine.prompts import staff as staff_prompts
-from genzine.utils import HTML, get_logger, slugify, strip_and_title
+from genzine.utils import HTML, LOG, slugify, strip_and_lower, strip_and_title
 
 from langchain.output_parsers import OutputFixingParser, RetryWithErrorOutputParser
 from langchain.output_parsers.enum import EnumOutputParser
@@ -33,10 +34,9 @@ from langchain_core.runnables import (
     RunnablePassthrough,
 )
 from langchain_core.runnables.base import RunnableSerializable
+from langchain_core.runnables.retry import RunnableRetry
 
 load_dotenv(find_dotenv())
-
-LOG = get_logger()
 
 
 def parse_with_prompt(parser: BaseOutputParser) -> Callable:
@@ -150,7 +150,7 @@ def create_staff_name_bio(
     # Parsers
 
     staff_bio_parser = CosineSimilarityOutputParser(
-        threshold=0.35, comparisons=bios, entity='person'
+        threshold=0.3, comparisons=bios, entity='person'
     )
     staff_bio_retry_parser = RetryWithErrorOutputParser.from_llm(
         parser=staff_bio_parser, llm=board_model, max_retries=3
@@ -188,12 +188,15 @@ def create_staff_name_bio(
             name=RunnableLambda(lambda x: staff_name_parser.parse(x['name'])),
             bio=RunnableLambda(lambda x: x['bio']),
         )
-    ).with_retry(
-        retry_if_exception_type=(OutputParserException,),
-        stop_after_attempt=3,
     )
 
-    name_bio = get_name_bio_chain.invoke({})
+    get_name_bio_chain_w_retry = RunnableRetry(
+        bound=get_name_bio_chain,
+        retry_if_exception_type=(OutputParserException,),
+        max_attempt_number=3,
+    )
+
+    name_bio = get_name_bio_chain_w_retry.invoke({})
 
     return name_bio['name'], name_bio['bio']
 
@@ -240,8 +243,9 @@ def create_staff_pool(board: list[AIModel], n: int) -> list[Staff]:
     names = [staff.name for staff in current_staff]
     bios = [staff.bio for staff in current_staff]
 
-    for _ in range(n):
+    for i in range(n):
         new_staff = create_staff_member(ai=random.choice(board), names=names, bios=bios)
+        LOG.info(f'Created staff member {i + 1} of {n}: {new_staff.name}')
         pool.append(new_staff)
         names.append(new_staff.name)
         bios.append(new_staff.bio)
@@ -296,6 +300,15 @@ def make_choose_staff_chain(
         'StaffEnum', {staff.short_name: staff.short_name for staff in pool}
     )
 
+    # Monkeypatch some parsing into the Enum -- functional API doesn't support
+    @classmethod
+    def _missing_(cls, value):
+        for member in cls:
+            if member.value == strip_and_lower(value):
+                return member
+
+    StaffEnum._missing_ = _missing_
+
     parser = EnumOutputParser(enum=StaffEnum)
     prompt_with_instructions = prompt.partial(
         instructions=parser.get_format_instructions()
@@ -304,12 +317,9 @@ def make_choose_staff_chain(
         parser=parser, llm=model_corrector, max_retries=5
     )
 
-    # choose_chain = RunnableParallel(
-    #     completion=prompt_with_instructions | model,
-    #     prompt_value=prompt_with_instructions
-    # ) | RunnableLambda(parse_with_prompt(fixing_parser))
-
-    choose_chain = prompt_with_instructions | model | fixing_parser
+    choose_chain = (
+        prompt_with_instructions | model | strip_and_lower_parser | fixing_parser
+    )
 
     return choose_chain
 
@@ -342,10 +352,13 @@ def choose_editor(
     max_count = len([i for i in counter.values() if i == max(counter.values())])
 
     if max_count != 1 or counter.total() >= max_votes:
-        choose_editor(board=board, pool=pool, counter=counter, max_votes=max_votes)
+        editor, reduced_pool = choose_editor(
+            board=board, pool=pool, counter=counter, max_votes=max_votes
+        )
     else:
         chosen_editor_str = counter.most_common(n=1)[0][0]
         choices_dict = {staff.short_name: staff for staff in pool}
+
         editor = choices_dict.get(chosen_editor_str)
         editor.roles.update(['Editor'])
 
@@ -353,7 +366,7 @@ def choose_editor(
             staff for staff in pool if staff.short_name != editor.short_name
         ]
 
-        return editor, reduced_pool
+    return editor, reduced_pool
 
 
 def avatar_to_s3(img: PILImage, short_name: str) -> str:
@@ -397,12 +410,24 @@ if __name__ == '__main__':
 
     # board = create_board()
 
-    board = [AIModel.from_bio_page('open-mistral-7b')]
+    board = load_all_ais()['lang_ais']
+    corrector = AIModel.from_bio_page('gpt-3.5-turbo')
 
-    pool = create_staff_pool(board=board, n=2)
+    # pool = create_staff_pool(board=board, n=10)
 
-    for staff in pool:
-        staff.to_bio_page()
+    # for staff in pool:
+    #     staff.to_bio_page()
+
+    # LOG.info(f'Pool of {len(pool)} staff created')
+
+    pool = load_all_staff(version=2)
+
+    # editor, pool = choose_editor(board=board, pool=pool)
+
+    # LOG.info(f'{editor.name} chosen as editor')
+
+    # for staff in pool:
+    #     staff.to_bio_page()
 
     # avatar = draw_staff_member(staff=staff)
 

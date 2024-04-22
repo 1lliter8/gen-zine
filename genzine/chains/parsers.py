@@ -7,14 +7,13 @@ import numpy as np
 from fastembed import TextEmbedding
 from scipy.spatial.distance import cdist
 
-from genzine.utils import get_logger
+from genzine.utils import LOG, strip_and_lower
 
 from langchain_core.exceptions import OutputParserException
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import BaseOutputParser
 
 EMBEDDING_MODEL = TextEmbedding()
-LOG = get_logger()
 
 
 class CosineSimilarityOutputParser(BaseOutputParser[str]):
@@ -61,7 +60,8 @@ class CosineSimilarityOutputParser(BaseOutputParser[str]):
                 'novel and unique. \n'
                 f'Received: {text} \n'
                 f'Similar to: {similar_parsed} \n'
-                f'Give a novel and unique {self.entity}. Be creative! '
+                f'Give a novel and unique {self.entity}. '
+                f"Can you create a {self.entity} that's completely different? "
                 f'Return only the new {self.entity}. Do not explain. \n'
                 f'{self.entity.title()}: '
             )
@@ -154,6 +154,9 @@ class LenOutputParser(BaseOutputParser[str]):
 
         return text
 
+    def get_format_instructions(self) -> str:
+        return f'Return only a {self.entity} of {self.max_len} ' 'characters or less. '
+
     @property
     def _type(self) -> str:
         return 'len_output_parser'
@@ -190,3 +193,10 @@ class IntOutputParser(BaseOutputParser[int]):
     @property
     def _type(self) -> str:
         return 'int_output_parser'
+
+
+def strip_and_lower_parser(text: str | AIMessage) -> str:
+    if isinstance(text, AIMessage):
+        text = text.content
+
+    return strip_and_lower(text)

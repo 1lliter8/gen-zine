@@ -18,7 +18,7 @@ def get_logger() -> logging.Logger:
     logger.setLevel(logging.INFO)
 
     formatter = logging.Formatter(
-        '[%(asctime)s | %(name)s | %(levelname)s] %(message)s'
+        '[%(asctime)s | %(name)s | %(levelname)s] %(message)s', '%Y-%m-%d %H:%M'
     )
     formatter.converter = time.gmtime
 
@@ -29,6 +29,9 @@ def get_logger() -> logging.Logger:
     logger.addHandler(handler)
 
     return logger
+
+
+LOG = get_logger()
 
 
 def to_camelcase(text: str) -> str:
@@ -43,6 +46,10 @@ def slugify(text: str) -> str:
 
 def strip_and_title(text: str) -> str:
     return text.strip(string.punctuation + ' \n').title()
+
+
+def strip_and_lower(text: str) -> str:
+    return text.strip(string.punctuation + ' \n').lower()
 
 
 def h1(text: str) -> str:
