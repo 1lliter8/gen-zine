@@ -1,0 +1,15 @@
+authors:
+- azura
+- nora
+- luna
+board:
+- gpt-3.5-turbo
+- open-mistral-7b
+- command-r
+edition: 2
+editor: viper
+illustrators:
+- seraphina
+name: '"Earth''s Whispers"'
+path: 2-earth-s-whispers-
+version: 2

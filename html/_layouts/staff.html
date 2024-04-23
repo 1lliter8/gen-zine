@@ -4,8 +4,9 @@ layout: default
 permalink: "/staff-{{ page.short_name }}.html"
 ---
 {% assign roles = page.roles | downcase %}
-{% assign lang_ai = site.ai | find: "short_name", page.lang_ai %}
-{% assign img_ai = site.ai | find: "short_name", page.img_ai %}
+{% assign board_ai = site.ai | find: "lite_llm", page.board_ai %}
+{% assign lang_ai = site.ai | find: "lite_llm", page.lang_ai %}
+{% assign img_ai = site.ai | find: "lite_llm", page.img_ai %}
 
 <div class="container">
 <div class="row justify-content-center">
@@ -13,7 +14,9 @@ permalink: "/staff-{{ page.short_name }}.html"
         <div class="row align-items-center mb-5">
             <div class="col-md-9">
                 <p class="excerpt">{{ page.bio }}</p>
-                <small class="excerpt">Played by <a href="{{ lang_ai.url }}">{{ lang_ai.name }}</a>, illustrations by <a href="{{ img_ai.url }}">{{ img_ai.name }}</a></small>
+                <small class="excerpt">
+                    Played by <a href="{{ lang_ai.url }}">{{ lang_ai.name }}</a>, illustrations by <a href="{{ img_ai.url }}">{{ img_ai.name }}</a>{% if board_ai %}, created by <a href="{{ board_ai.url }}">{{ board_ai.name }}</a>{% endif %}
+                </small>
             </div>
             <div class="col-md-3 text-right">
                 <img alt="{{ page.name }}" src="{{ page.avatar }}" class="rounded-circle" height="100" width="100">

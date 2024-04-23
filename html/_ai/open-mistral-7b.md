@@ -1,7 +1,7 @@
 ---
 short_name: open-mistral-7b
 prefix: mistral
-lite_llm: openai/open-mistral-7b
+lite_llm: mistral/open-mistral-7b
 name: Mistral 7B
 site: https://mistral.ai/news/announcing-mistral-7b/
 ai_type: Language

@@ -18,12 +18,12 @@ style = ChatPromptTemplate.from_template(
     '\n\n'
     'Make up an illustration style this person uses. '
     'Describe the emotion, palette and mood. '
-    'Use real artistic movements and artworks as reference. '
-    'Do not mention real people. '
+    'Use real artistic movements as reference. '
+    'Do not mention real artists, photographers, illustrators or people. '
     'Do not explain why it suits them. '
     'Only explain the style. '
     'Use 30 words or less. '
-    "Do not mention the person's name"
+    "Do not mention any person's name"
 )
 
 avatar = PromptTemplate.from_template('{bio} {style}')

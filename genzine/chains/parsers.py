@@ -176,6 +176,7 @@ class IntOutputParser(BaseOutputParser[int]):
             text = re.search(r'\d+', text).group()
             return int(text)
         except (ValueError, AttributeError) as e:
+            LOG.info(f'Integer not found in {text}')
             egs = {randrange(self.min_int, self.max_int + 1) for _ in range(5)}
             raise OutputParserException(
                 'IntOutputParser expects an integer, not a string. '

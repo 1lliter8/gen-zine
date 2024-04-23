@@ -256,7 +256,7 @@ def commission_article_images(
     )
     image_blob = '1. ' + image_blob  # correct for '1. ' being in prompt
 
-    image_prompt_list = re.split(r'\d', image_blob, flags=0)
+    image_prompt_list = re.split(r'\d.', image_blob, flags=0)
     image_prompt_list = [
         img.strip() for img in image_prompt_list if len(img.strip()) > 0
     ]

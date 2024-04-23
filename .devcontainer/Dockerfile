@@ -7,10 +7,12 @@ USER vscode
 
 # Avoid warnings by switching to noninteractive
 ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Europe/London
 
 # Update Debian
 RUN \
-  sudo apt-get -y update
+  sudo apt-get -y update \
+  && sudo apt-get install -y tzdata
 
 # Install Python and dependecies
 RUN \
