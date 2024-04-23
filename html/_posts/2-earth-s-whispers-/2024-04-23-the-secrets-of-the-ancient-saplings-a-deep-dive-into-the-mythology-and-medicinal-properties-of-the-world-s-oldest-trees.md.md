@@ -1,7 +1,7 @@
 ---
 author: azura
 categories:
-- '#2 "Earth''s Whispers"'
+- "#2 Earth's Whispers"
 comments: false
 illustrator: seraphina
 images:
