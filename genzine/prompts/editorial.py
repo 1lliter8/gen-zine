@@ -84,8 +84,9 @@ create_image_commission = ChatPromptTemplate.from_template(
     'Give clear instructions for the content of the image '
     'using no more than 30 words for each. \n\n'
     'Article: \n\n {text} \n\n'
-    'Return the image descriptions as a numbered list. '
-    '{n} numbered image descriptions: '
+    'Return the {n} image descriptions as a numbered list eg 1, 2, 3 etc. '
+    '{n} numbered image descriptions: \n'
+    '1. '
 )
 
 illustrate_article = PromptTemplate.from_template('{prompt} {style}')

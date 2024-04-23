@@ -172,10 +172,10 @@ class IntOutputParser(BaseOutputParser[int]):
         if isinstance(text, AIMessage):
             text = text.content
         text = text.strip(punctuation + ' \n')
-        text = re.search(r'\d+', text).group()
         try:
+            text = re.search(r'\d+', text).group()
             return int(text)
-        except ValueError as e:
+        except (ValueError, AttributeError) as e:
             egs = {randrange(self.min_int, self.max_int + 1) for _ in range(5)}
             raise OutputParserException(
                 'IntOutputParser expects an integer, not a string. '

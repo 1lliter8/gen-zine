@@ -138,7 +138,10 @@ class Article(ArticleWritten):
             images: list[str] = [
                 image.to_html() for image in self.images[1 : len(paras)]
             ]
-            mix_div: int = len(paras) // len(images)
+            if len(images) == 0:
+                mix_div: int = 1
+            else:
+                mix_div: int = len(paras) // len(images)
 
             for i, para in enumerate(paras):
                 f.write(para)
