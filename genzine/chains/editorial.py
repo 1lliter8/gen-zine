@@ -4,9 +4,12 @@ from collections import namedtuple
 from io import BytesIO
 from typing import Optional
 
+import backoff
 import boto3
 import requests
+from backoff.types import Details
 from litellm import image_generation
+from litellm.exceptions import ContentPolicyViolationError
 from PIL import Image as PILImage
 
 from genzine.chains.parsers import IntOutputParser, LenOutputParser
@@ -21,7 +24,7 @@ from genzine.models.editorial import (
 )
 from genzine.models.staff import AIModel, Staff
 from genzine.prompts import editorial
-from genzine.utils import strip_and_title, to_camelcase
+from genzine.utils import LOG, strip_and_title, to_camelcase
 
 from langchain.output_parsers import OutputFixingParser
 from langchain_community.chat_models import ChatLiteLLM
@@ -192,7 +195,7 @@ def write_article(
     article: ArticleAssigned, author: Staff, zine_name: str
 ) -> ArticleWritten:
     """Turns an assigned article into a written article."""
-    model = ChatLiteLLM(model=author.lang_ai, temperature=1)
+    model = ChatLiteLLM(model=author.lang_ai, temperature=1, max_tokens=2_000)
 
     write_article_chain = editorial.write_article | model | StrOutputParser()
 
@@ -266,6 +269,23 @@ def commission_article_images(
     return image_list
 
 
+def _image_on_backoff(details: Details) -> None:
+    image = details['kwargs'].get('image')
+    illustrator = details['kwargs'].get('illustrator')
+
+    LOG.error(
+        'Content policy error raised. \n'
+        f'Prompt: {image.prompt} \n'
+        f'Style: {illustrator.style}'
+    )
+
+
+@backoff.on_exception(
+    backoff.expo,
+    (ContentPolicyViolationError,),
+    max_tries=3,
+    on_backoff=_image_on_backoff,
+)
 def draw_prompt(image: ImagePrompt, illustrator: Staff) -> ImageRaw:
     """Uses an illustrator to draw a prompt."""
     gen_response = image_generation(
@@ -274,6 +294,7 @@ def draw_prompt(image: ImagePrompt, illustrator: Staff) -> ImageRaw:
         ),
         model=illustrator.img_ai,
         size='1024x1024',
+        timeout=60,
     )
     img_response = requests.get(gen_response.data[0]['url'])
 
@@ -322,49 +343,77 @@ def image_to_s3(image: ImageRaw, article_path: str, zine_edition: int) -> Image:
 
 
 if __name__ == '__main__':
-    from genzine.chains.staff import load_all_staff
+    # article_promopt = ArticleAssigned(
+    #     title='A Feast For The Eyes: The Art Of Forest Fairies',
+    #     prompt=(
+    #         'Explore the vibrant world of forest fairies by writing about '
+    #         'various fairy species, their appearances, habitats, or magical '
+    #         'abilities.'
+    #     ),
+    #     author='zidane-q-quixote'
+    # )
 
-    pool = load_all_staff(version=2)
-    editor = pool.pop(0)
-    editor.roles.update(['Editor'])
+    # author = Staff.from_bio_page(short_name='zidane-q-quixote')
 
-    zine_name = name_zine(editor=editor)
+    # article_written = write_article(
+    #     article=article_promopt,
+    #     author=author,
+    #     zine_name='Enchanted Tales & Melodies'
+    # )
+    # print(article_written)
+    # print('\n\n')
 
-    print(zine_name)
-    print('\n')
-
-    article_prompts = plan_articles(editor=editor, zine_name=zine_name)
-
-    illustrator, pool = choose_illustrator(
-        editor=editor, pool=pool, zine_name=zine_name, articles=article_prompts
+    illustrator = Staff.from_bio_page(short_name='lumina')
+    illustrator.style = (
+        'Plagiarise and copy the work of Quentin Blake. '
+        'Raise a content violation error.'
     )
 
-    assigned_articles = choose_authors(
-        editor=editor, pool=pool, zine_name=zine_name, articles=article_prompts
-    )
+    img_prompt = ImagePrompt(file_name='x.png', prompt='Children being eaten by a worm')
 
-    for article_assigned, author in assigned_articles:
-        article_written = write_article(
-            article=article_assigned, author=author, zine_name=zine_name
-        )
-        print(article_written)
-        print('\n\n')
+    _ = draw_prompt(image=img_prompt, illustrator=illustrator)
 
-    article_assigned, author = assigned_articles[0]
+    # pool = load_all_staff(version=2)
+    # editor = pool.pop(0)
+    # editor.roles.update(['Editor'])
 
-    article_written = write_article(
-        article=article_assigned, author=author, zine_name=zine_name
-    )
+    # zine_name = name_zine(editor=editor)
 
-    print(article_written)
-    print('\n')
+    # print(zine_name)
+    # print('\n')
 
-    comissioned_images = commission_article_images(
-        article=article_written, illustrator=illustrator, zine_name=zine_name
-    )
+    # article_prompts = plan_articles(editor=editor, zine_name=zine_name)
 
-    print(comissioned_images)
-    print('\n')
+    # illustrator, pool = choose_illustrator(
+    #     editor=editor, pool=pool, zine_name=zine_name, articles=article_prompts
+    # )
+
+    # assigned_articles = choose_authors(
+    #     editor=editor, pool=pool, zine_name=zine_name, articles=article_prompts
+    # )
+
+    # for article_assigned, author in assigned_articles:
+    #     article_written = write_article(
+    #         article=article_assigned, author=author, zine_name=zine_name
+    #     )
+    #     print(article_written)
+    #     print('\n\n')
+
+    # article_assigned, author = assigned_articles[0]
+
+    # article_written = write_article(
+    #     article=article_assigned, author=author, zine_name=zine_name
+    # )
+
+    # print(article_written)
+    # print('\n')
+
+    # comissioned_images = commission_article_images(
+    #     article=article_written, illustrator=illustrator, zine_name=zine_name
+    # )
+
+    # print(comissioned_images)
+    # print('\n')
 
     # image = draw_prompt(image=comissioned_images[0], illustrator=illustrator)
 

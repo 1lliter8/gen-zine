@@ -12,8 +12,8 @@ from genzine.chains.editorial import (
 )
 from genzine.chains.staff import (
     choose_editor,
-    create_board,
     create_staff_pool,
+    load_all_ais,
     staff_to_s3,
 )
 from genzine.models.editorial import Article, Zine
@@ -24,7 +24,11 @@ from genzine.utils import LOG, slugify
 def make_zine(edition: int) -> None:
     """Create edition of gen-zine."""
     # Choose a board
-    board = create_board()
+    # board = create_board()
+
+    # Cheating a bit -- I want them all in this edition
+    board = load_all_ais()['lang_ais']
+
     LOG.info(
         f'Board of {len(board)} AIs created: '
         f'{', '.join([ai.lite_llm for ai in board])}'
@@ -125,9 +129,9 @@ def make_zine(edition: int) -> None:
         name=zine_name,
         edition=edition,
         path=Path(slugify(f'{edition} {zine_name}')),
-        board=board,
+        board=[ai.short_name for ai in board],
         editor=editor.short_name,
-        authors=[staff.short_name for staff in pool],
+        authors=[staff.short_name for staff in authors],
         illustrators=[illustrator.short_name],
         articles=all_articles,
     )

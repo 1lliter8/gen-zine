@@ -351,7 +351,7 @@ def choose_editor(
 
     max_count = len([i for i in counter.values() if i == max(counter.values())])
 
-    if max_count != 1 or counter.total() >= max_votes:
+    if max_count != 1 and counter.total() <= max_votes:
         editor, reduced_pool = choose_editor(
             board=board, pool=pool, counter=counter, max_votes=max_votes
         )
@@ -413,14 +413,14 @@ if __name__ == '__main__':
     board = load_all_ais()['lang_ais']
     corrector = AIModel.from_bio_page('gpt-3.5-turbo')
 
-    # pool = create_staff_pool(board=board, n=10)
+    pool = create_staff_pool(board=board, n=1)
 
-    # for staff in pool:
-    #     staff.to_bio_page()
+    for staff in pool:
+        staff.to_bio_page()
 
     # LOG.info(f'Pool of {len(pool)} staff created')
 
-    pool = load_all_staff(version=2)
+    # pool = load_all_staff(version=2)
 
     # editor, pool = choose_editor(board=board, pool=pool)
 
